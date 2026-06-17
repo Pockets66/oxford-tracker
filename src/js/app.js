@@ -1,0 +1,129 @@
+import { connectFolder, restoreFolder, loadAll } from "./storage.js";
+import { navigate, initRouter } from "./router.js";
+import { qs, el, clear } from "./dom.js";
+
+const TABS = [
+  { id: "characters", label: "Characters" },
+  { id: "scenes",     label: "Scenes" },
+  { id: "plotlines",  label: "Plotlines" },
+  { id: "factions",   label: "Factions" },
+  { id: "anomalies",  label: "Anomalies" },
+];
+
+const COMING_SLICE = {
+  characters: "Slice 2",
+  scenes:     "Slice 6",
+  plotlines:  "Slice 7",
+  factions:   "Slice 3",
+  anomalies:  "Slice 9",
+};
+
+let folderHandle = null;
+let appData = null;
+
+// ── View mounting ────────────────────────────────────────────────────────────
+
+function mountView(tab) {
+  const main = qs("#main");
+  clear(main);
+  const label = TABS.find((t) => t.id === tab)?.label ?? tab;
+  main.append(el("div", { class: "placeholder-view" }, [
+    `${label} — coming in ${COMING_SLICE[tab] ?? "a future slice"}.`,
+  ]));
+}
+
+// ── Tab highlight ─────────────────────────────────────────────────────────
+
+function setActiveTab(tab) {
+  for (const btn of document.querySelectorAll(".tab-btn")) {
+    btn.classList.toggle("active", btn.dataset.tab === tab);
+  }
+}
+
+// ── Error banner ─────────────────────────────────────────────────────────
+
+function showBanner(message) {
+  const banner = qs("#error-banner");
+  qs("#error-text").textContent = message;
+  banner.classList.add("visible");
+}
+
+function hideBanner() {
+  qs("#error-banner").classList.remove("visible");
+}
+
+// ── Welcome overlay ──────────────────────────────────────────────────────
+
+function showWelcome() {
+  qs("#welcome").classList.add("visible");
+}
+
+function hideWelcome() {
+  qs("#welcome").classList.remove("visible");
+}
+
+// ── Boot ─────────────────────────────────────────────────────────────────
+
+async function boot(handle) {
+  folderHandle = handle;
+  appData = await loadAll(handle);
+  hideWelcome();
+  initRouter();
+}
+
+async function init() {
+  // Wire tab clicks.
+  for (const btn of document.querySelectorAll(".tab-btn")) {
+    btn.addEventListener("click", () => navigate(btn.dataset.tab));
+  }
+
+  // Wire settings button (open/switch folder).
+  qs("#settings-btn").addEventListener("click", async () => {
+    try {
+      const handle = await connectFolder();
+      await boot(handle);
+    } catch (err) {
+      if (err.name !== "AbortError") showBanner(`Could not open folder: ${err.message}`);
+    }
+  });
+
+  // Wire error banner dismiss.
+  qs("#banner-dismiss").addEventListener("click", hideBanner);
+
+  // Wire welcome button.
+  qs("#open-folder-btn").addEventListener("click", async () => {
+    try {
+      const handle = await connectFolder();
+      await boot(handle);
+    } catch (err) {
+      if (err.name !== "AbortError") showBanner(`Could not open folder: ${err.message}`);
+    }
+  });
+
+  // Listen for storage errors.
+  window.addEventListener("storage-error", (e) => {
+    showBanner(`Save failed (${e.detail.entityType}): ${e.detail.message}`);
+  });
+
+  // Listen for route changes.
+  window.addEventListener("route-change", (e) => {
+    const { tab } = e.detail;
+    setActiveTab(tab);
+    mountView(tab);
+  });
+
+  // Try to restore an existing folder.
+  try {
+    const handle = await restoreFolder();
+    if (handle) {
+      await boot(handle);
+    } else {
+      showWelcome();
+    }
+  } catch (err) {
+    showWelcome();
+    showBanner(`Could not restore folder: ${err.message}`);
+  }
+}
+
+init();
