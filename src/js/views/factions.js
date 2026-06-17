@@ -1,39 +1,17 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { createFaction } from "../schema.js";
+import { createFaction, displayName } from "../schema.js";
 import { createFilterBar } from "../filters.js";
 
-function applyFilters(factions, { search, facetValues }) {
-  let result = factions;
-
-  if (search) {
-    const q = search.toLowerCase();
-    result = result.filter(f =>
-      f.name.toLowerCase().includes(q) ||
-      f.summary.toLowerCase().includes(q) ||
-      f.agenda.toLowerCase().includes(q)
-    );
-  }
-
-  const sizeFilter = facetValues.size ?? [];
-  if (sizeFilter.length) {
-    result = result.filter(f => {
-      const n = f.memberIds.length;
-      return sizeFilter.some(bucket => {
-        if (bucket === "1–3")  return n >= 1 && n <= 3;
-        if (bucket === "4–9")  return n >= 4 && n <= 9;
-        if (bucket === "10+")  return n >= 10;
-        return false;
-      });
-    });
-  }
-
-  if (facetValues.hasLeader) {
-    result = result.filter(f => !!f.leaderId);
-  }
-
-  return result;
+function applyFilters(factions, { search }) {
+  if (!search) return factions;
+  const q = search.toLowerCase();
+  return factions.filter(f =>
+    f.name.toLowerCase().includes(q) ||
+    f.summary.toLowerCase().includes(q) ||
+    f.agenda.toLowerCase().includes(q)
+  );
 }
 
 function renderFactionCard(faction, characters) {
@@ -49,7 +27,7 @@ function renderFactionCard(faction, characters) {
         `${faction.memberIds.length} member${faction.memberIds.length !== 1 ? "s" : ""}`,
       ]),
       leader
-        ? el("span", { class: "faction-card-leader" }, [`Led by ${leader.name}`])
+        ? el("span", { class: "faction-card-leader" }, [`Led by ${displayName(leader)}`])
         : null,
     ]),
   ]);
@@ -69,23 +47,11 @@ export function mountFactions(container, appData) {
 
   const filterBar = createFilterBar({
     searchPlaceholder: "Search factions",
-    facets: [
-      {
-        id: "size", label: "Member count", type: "multi",
-        options: ["1–3", "4–9", "10+"],
-      },
-      {
-        id: "hasLeader", label: "Has leader",
-        type: "toggle", defaultValue: false,
-      },
-    ],
+    facets: [],
   });
 
   const grid = el("div", { class: "faction-grid" });
-  const initialState = {
-    search: "",
-    facetValues: { size: [], hasLeader: false },
-  };
+  const initialState = { search: "", facetValues: {} };
 
   function renderGrid(state) {
     clear(grid);

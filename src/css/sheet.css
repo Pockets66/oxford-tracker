@@ -1,0 +1,148 @@
+/* ── Two-column character sheet layout ── */
+.sheet-layout {
+  align-items: start;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 60fr 40fr;
+}
+
+@media (max-width: 1100px) {
+  .sheet-layout {
+    grid-template-columns: 1fr;
+  }
+  .sheet-cards {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    position: static !important;
+  }
+}
+
+.sheet-main {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.sheet-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  position: sticky;
+  top: 1rem;
+}
+
+.sheet-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  padding: 0.85rem 1rem;
+}
+
+.sheet-card-title {
+  border-bottom: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.5rem;
+  padding-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+/* Large background textarea — fills vertically */
+.sheet-textarea--bg {
+  min-height: 20rem;
+  overflow: hidden;
+  resize: vertical;
+}
+
+/* Relationships section header (title + Add button on same line) */
+.sheet-section-header {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding-bottom: 0.3rem;
+}
+
+.sheet-section-header .sheet-section-title {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+/* Read-only sun sign display */
+.sheet-sun-display {
+  color: var(--text);
+  display: block;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+  font-style: italic;
+  padding: 0.2rem 0;
+}
+
+/* Wide text input (place of birth) */
+.sheet-input--wide {
+  min-width: 160px;
+  width: 100%;
+}
+
+/* ── Relationship rows ── */
+.rels-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.rel-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.rel-other-name {
+  color: var(--accent);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: color 0.15s;
+}
+
+.rel-other-name:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+}
+
+.rel-type {
+  color: var(--text-muted);
+  flex: 1;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+}
+
+/* ── Small action buttons ── */
+.btn-small {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.65rem;
+  letter-spacing: 0.06em;
+  padding: 0.15rem 0.5rem;
+  text-transform: uppercase;
+  transition: border-color 0.12s, color 0.12s;
+}
+
+.btn-small:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.btn-small--danger:hover {
+  border-color: var(--danger);
+  color: var(--danger);
+}

@@ -48,3 +48,48 @@ html[data-theme="dark"] {
   --owner-caiden: #a04d56;
   --owner-npc:    #7a6e5e;
 }
+
+/* ── Custom scrollbars ── */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent) var(--bg-surface);
+}
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-track { background: var(--bg-surface); }
+*::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 0;
+  border: 2px solid var(--bg-surface);
+}
+*::-webkit-scrollbar-thumb:hover { background: var(--accent-hover); }
+
+/* ── Global form control baseline ── */
+input[type="text"],
+input[type="number"],
+input[type="date"],
+input[type="time"],
+select,
+textarea {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.5rem;
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+input[type="date"]:focus,
+input[type="time"]:focus,
+select:focus,
+textarea:focus {
+  outline: 1px solid var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="time"]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  filter: invert(0.9);
+}

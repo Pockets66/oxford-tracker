@@ -1,10 +1,11 @@
-import { loadAll } from "./storage.js";
+import { loadAll, save } from "./storage.js";
 import { navigate, initRouter } from "./router.js";
 import { qs, el, clear } from "./dom.js";
 import { mountCharacters } from "./views/characters.js";
 import { mountCharacterSheet } from "./views/character-sheet.js";
 import { mountFactions } from "./views/factions.js";
 import { mountFactionPage } from "./views/faction-page.js";
+import { migrateCharacters, migrateNamesToV3 } from "./schema.js";
 
 const TABS = [
   { id: "characters", label: "Characters" },
@@ -76,7 +77,7 @@ function hideBanner() {
 
 async function init() {
   // Theme toggle.
-  const savedTheme = localStorage.getItem("oxford-theme") || "light";
+  const savedTheme = localStorage.getItem("oxford-theme") || "dark";
   document.documentElement.dataset.theme = savedTheme;
   const themeBtn = qs("#theme-toggle");
   themeBtn.textContent = savedTheme === "dark" ? "☀" : "☾";
@@ -108,9 +109,19 @@ async function init() {
     mountView(tab, id);
   });
 
-  // Load data and boot.
+  // Load data, run migrations if needed, then boot.
   try {
     appData = await loadAll();
+    let version = appData.meta?.schemaVersion ?? 1;
+    if (version < 2) { migrateCharacters(appData.characters);  version = 2; }
+    if (version < 3) { migrateNamesToV3(appData.characters);   version = 3; }
+    if ((appData.meta?.schemaVersion ?? 1) < version) {
+      appData.meta = { ...appData.meta, schemaVersion: version };
+      await Promise.all([
+        save("characters", appData.characters),
+        save("meta", appData.meta),
+      ]);
+    }
     initRouter();
   } catch (err) {
     showBanner(`Could not load data: ${err.message}`);

@@ -38,6 +38,8 @@ Work is delivered in slices. Each slice has a prompt file in `prompts/` describi
 
 When a slice is done, append a short note to ROADMAP.md under that slice marking it complete and listing any followups discovered along the way.
 
+Claude Code cannot see the running app. Do not attempt screenshots, browser automation, or visual verification. Trust the code. The user will report back if something looks wrong.
+
 ## Data model rules
 
 All persistent data lives in JSON files inside the user's chosen data folder. The app reads them on load and writes them on change. File layout inside the data folder:

@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { createCharacter } from "../schema.js";
+import { createCharacter, displayName } from "../schema.js";
 import { createFilterBar } from "../filters.js";
 
 function chipTextColor(hex) {
@@ -34,19 +34,23 @@ function ownerBorderStyle(ownerStr) {
   return `linear-gradient(to bottom, ${stops.join(", ")})`;
 }
 
+const ALL_OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
+
 function applyFilters(characters, { search, facetValues }) {
   let result = characters;
 
   if (search) {
     const q = search.toLowerCase();
     result = result.filter(c =>
-      c.name.toLowerCase().includes(q) ||
+      displayName(c).toLowerCase().includes(q) ||
+      (c.aliases ?? []).some(a => a.toLowerCase().includes(q)) ||
+      (c.previousNames ?? []).some(n => n.toLowerCase().includes(q)) ||
       c.summary.toLowerCase().includes(q)
     );
   }
 
-  const ownerFilter = facetValues.owner ?? [];
-  if (ownerFilter.length) {
+  const ownerFilter = facetValues.owner ?? ALL_OWNERS;
+  if (ownerFilter.length < ALL_OWNERS.length) {
     result = result.filter(c => {
       const owners = (c.owner || "NPC").split(",").map(s => s.trim());
       return ownerFilter.some(o => owners.includes(o));
@@ -56,7 +60,7 @@ function applyFilters(characters, { search, facetValues }) {
   const factionFilter = facetValues.faction ?? [];
   if (factionFilter.length) {
     result = result.filter(c =>
-      factionFilter.some(fId => c.factionIds.includes(fId))
+      factionFilter.some(fId => (c.factionIds ?? []).includes(fId))
     );
   }
 
@@ -79,11 +83,13 @@ function renderCard(character, factions) {
     "data-owner": character.owner || "NPC",
   }, [
     character.deceased ? el("span", { class: "character-deceased-tag" }, ["Deceased"]) : null,
-    el("h2", { class: "character-name" }, [character.name || "Unnamed"]),
+    el("h2", { class: "character-name" }, [displayName(character)]),
+    character.aliases?.length ? el("p", { class: "character-aka" }, [`a.k.a. ${character.aliases[0]}`]) : null,
     (character.age || character.birthday) ? el("p", { class: "character-meta" }, [
       [character.age ? `Age ${character.age}` : null, character.birthday || null]
         .filter(Boolean).join(" · "),
     ]) : null,
+
     zodiacParts.length ? el("p", { class: "character-zodiac" }, [zodiacParts.join(" / ")]) : null,
     el("span", { class: "character-owner-badge" }, [character.owner || "NPC"]),
     character.summary ? el("p", { class: "character-summary" }, [character.summary]) : null,
@@ -121,12 +127,18 @@ export function mountCharacters(container, appData) {
     searchPlaceholder: "Search characters",
     facets: [
       {
-        id: "owner", label: "Owner", type: "multi",
-        options: ["Bree", "Jack", "Nicole", "Caiden", "NPC"],
+        id: "owner", type: "owner-toggles",
+        options: [
+          { value: "Bree",   color: "var(--owner-bree)" },
+          { value: "Jack",   color: "var(--owner-jack)" },
+          { value: "Nicole", color: "var(--owner-nicole)" },
+          { value: "Caiden", color: "var(--owner-caiden)" },
+          { value: "NPC",    color: "var(--owner-npc)" },
+        ],
       },
       {
-        id: "faction", label: "Faction", type: "multi",
-        options: (appData.factions ?? []).map(f => ({ value: f.id, label: f.name })),
+        id: "faction", type: "faction-dropdown",
+        options: (appData.factions ?? []).map(f => ({ value: f.id, label: f.name, color: f.color })),
       },
       {
         id: "showDeceased", label: "Show deceased",
@@ -138,7 +150,7 @@ export function mountCharacters(container, appData) {
   const grid = el("div", { class: "character-grid" });
   const initialState = {
     search: "",
-    facetValues: { owner: [], faction: [], showDeceased: true },
+    facetValues: { owner: [...ALL_OWNERS], faction: [], showDeceased: true },
   };
 
   function renderGrid(state) {

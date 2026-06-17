@@ -1,9 +1,13 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { syncFactionMembership } from "../schema.js";
+import { syncFactionMembership, displayName } from "../schema.js";
+import { sunSignFromDate } from "../zodiac.js";
+import { openRelationshipDialog } from "./relationship-dialog.js";
 
 const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
+const SIGNS  = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
+                 "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
 
 function chipTextColor(hex) {
   if (!hex || hex.length < 7) return "#f4ecd8";
@@ -14,23 +18,58 @@ function chipTextColor(hex) {
 }
 
 function debounce(fn, delay) {
-  let timer;
-  return (...args) => {
-    clearTimeout(timer);
-    timer = setTimeout(() => fn(...args), delay);
-  };
+  let t;
+  return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), delay); };
 }
 
-function textInput(value, attrs = {}) {
-  const input = el("input", { type: "text", class: "sheet-input", ...attrs });
-  input.value = value ?? "";
-  return input;
+function signSelect(value) {
+  const sel = el("select", { class: "sheet-input" });
+  sel.append(el("option", { value: "" }, ["—"]));
+  for (const s of SIGNS) {
+    const opt = el("option", { value: s }, [s]);
+    if (s === value) opt.selected = true;
+    sel.append(opt);
+  }
+  return sel;
 }
 
-function sheetTextarea(value) {
-  const ta = el("textarea", { class: "sheet-textarea" });
-  ta.value = value ?? "";
-  return ta;
+function makeNameList(ch, key, label, onSave) {
+  const summaryEl = el("summary", { class: "name-list-summary" });
+  const chipsEl   = el("div",    { class: "name-chips" });
+  const addInput  = el("input",  { type: "text", class: "sheet-input", placeholder: "Add…" });
+  const addBtn    = el("button", { class: "btn-small", onclick: add }, ["Add"]);
+  addInput.addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); add(); } });
+
+  function render() {
+    summaryEl.textContent = `${label} (${(ch[key] ?? []).length})`;
+    clear(chipsEl);
+    (ch[key] ?? []).forEach((v, i) => chipsEl.append(
+      el("span", { class: "name-chip" }, [
+        v,
+        el("button", { class: "name-chip-remove", onclick: () => {
+          ch[key].splice(i, 1); onSave(); render();
+        }}, ["×"]),
+      ])
+    ));
+  }
+
+  function add() {
+    const v = addInput.value.trim();
+    if (!v) return;
+    (ch[key] = ch[key] ?? []).push(v);
+    addInput.value = "";
+    onSave();
+    render();
+  }
+
+  render();
+  return el("details", { class: "name-list-details" }, [
+    summaryEl,
+    el("div", { class: "name-list-items" }, [
+      chipsEl,
+      el("div", { class: "name-list-add" }, [addInput, addBtn]),
+    ]),
+  ]);
 }
 
 export function mountCharacterSheet(container, appData, id) {
@@ -42,36 +81,41 @@ export function mountCharacterSheet(container, appData, id) {
 
   let savedPill = null;
 
-  function persist() {
-    character.updatedAt = new Date().toISOString();
-    save("characters", appData.characters).then(() => {
-      if (savedPill) savedPill.remove();
-      savedPill = el("span", { class: "saved-pill" }, ["Saved"]);
-      container.append(savedPill);
-      setTimeout(() => { savedPill?.remove(); savedPill = null; }, 2000);
-    });
+  function showSavedPill() {
+    if (savedPill) savedPill.remove();
+    savedPill = el("span", { class: "saved-pill" }, ["Saved"]);
+    container.append(savedPill);
+    setTimeout(() => { savedPill?.remove(); savedPill = null; }, 2000);
   }
 
+  function persist() {
+    character.updatedAt = new Date().toISOString();
+    save("characters", appData.characters).then(showSavedPill);
+  }
   const debouncedSave = debounce(persist, 400);
 
+  function persistMembership() {
+    Promise.all([save("characters", appData.characters), save("factions", appData.factions)])
+      .then(showSavedPill);
+  }
+
   function handleDelete() {
-    if (!confirm(`Delete "${character.name}"? This cannot be undone.`)) return;
+    if (!confirm(`Delete "${displayName(character)}"? This cannot be undone.`)) return;
     const idx = appData.characters.findIndex(c => c.id === id);
     if (idx !== -1) appData.characters.splice(idx, 1);
     save("characters", appData.characters).then(() => navigate("characters"));
   }
 
-  // ── Header ──
-  const nameInput = el("input", {
-    type: "text",
-    class: "sheet-name-input",
-    placeholder: "Character name",
-  });
-  nameInput.value = character.name;
-  nameInput.addEventListener("input", () => {
-    character.name = nameInput.value;
-    debouncedSave();
-  });
+  // ── Header: name inputs ──
+  const firstInput  = el("input", { type: "text", class: "sheet-name-part name-part--first",  placeholder: "First name" });
+  const middleInput = el("input", { type: "text", class: "sheet-name-part name-part--middle", placeholder: "Middle" });
+  const lastInput   = el("input", { type: "text", class: "sheet-name-part name-part--last",   placeholder: "Last name" });
+  firstInput.value  = character.firstName  ?? "";
+  middleInput.value = character.middleName ?? "";
+  lastInput.value   = character.lastName   ?? "";
+  firstInput.addEventListener("input",  () => { character.firstName  = firstInput.value;  debouncedSave(); });
+  middleInput.addEventListener("input", () => { character.middleName = middleInput.value; debouncedSave(); });
+  lastInput.addEventListener("input",   () => { character.lastName   = lastInput.value;   debouncedSave(); });
 
   const ownerSelect = el("select", { class: "sheet-owner-select" });
   for (const o of OWNERS) {
@@ -79,153 +123,108 @@ export function mountCharacterSheet(container, appData, id) {
     if (character.owner === o) opt.selected = true;
     ownerSelect.append(opt);
   }
-  ownerSelect.addEventListener("change", () => {
-    character.owner = ownerSelect.value;
-    debouncedSave();
-  });
+  ownerSelect.addEventListener("change", () => { character.owner = ownerSelect.value; debouncedSave(); });
 
-  const deceasedCheck = el("input", {
-    type: "checkbox",
-    id: "sheet-deceased",
-    class: "sheet-checkbox",
-  });
+  const deceasedCheck = el("input", { type: "checkbox", id: "sheet-deceased", class: "sheet-checkbox" });
   deceasedCheck.checked = !!character.deceased;
-  deceasedCheck.addEventListener("change", () => {
-    character.deceased = deceasedCheck.checked;
-    debouncedSave();
-  });
+  deceasedCheck.addEventListener("change", () => { character.deceased = deceasedCheck.checked; debouncedSave(); });
 
   const header = el("div", { class: "sheet-header" }, [
     el("a", { class: "sheet-back", href: "#/characters" }, ["← Characters"]),
-    nameInput,
+    el("div", { class: "sheet-name-group" }, [firstInput, middleInput, lastInput]),
     el("div", { class: "sheet-header-controls" }, [
       ownerSelect,
-      el("label", { class: "sheet-deceased-label", for: "sheet-deceased" }, [
-        deceasedCheck,
-        "Deceased",
-      ]),
+      el("label", { class: "sheet-deceased-label", for: "sheet-deceased" }, [deceasedCheck, "Deceased"]),
       el("button", { class: "btn-danger", onclick: handleDelete }, ["Delete"]),
     ]),
   ]);
 
   // ── Identity ──
-  const ageInput = el("input", {
-    type: "number",
-    class: "sheet-input sheet-input--narrow",
-    placeholder: "Age",
-    min: "0",
-    max: "999",
-  });
+  const ageInput = el("input", { type: "number", class: "sheet-input sheet-input--narrow", placeholder: "Age", min: "0", max: "999" });
   ageInput.value = character.age ?? "";
   ageInput.addEventListener("input", () => {
     character.age = ageInput.value !== "" ? Number(ageInput.value) : null;
     debouncedSave();
   });
 
-  const birthdayInput = textInput(character.birthday, { placeholder: "Birthday" });
+  const birthdayInput = el("input", { type: "date", class: "sheet-input" });
+  birthdayInput.value = character.birthday ?? "";
+
+  const sunDisplay = el("span", { class: "sheet-sun-display" }, [character.zodiac.sun ?? "—"]);
   birthdayInput.addEventListener("input", () => {
-    character.birthday = birthdayInput.value || null;
+    character.birthday     = birthdayInput.value || null;
+    character.zodiac.sun   = sunSignFromDate(character.birthday);
+    sunDisplay.textContent = character.zodiac.sun ?? "—";
     debouncedSave();
   });
 
-  const sunInput = textInput(character.zodiac.sun, { placeholder: "Sun" });
-  sunInput.addEventListener("input", () => {
-    character.zodiac.sun = sunInput.value || null;
-    debouncedSave();
-  });
+  const birthTimeInput = el("input", { type: "time", class: "sheet-input" });
+  birthTimeInput.value = character.birthTime ?? "";
+  birthTimeInput.addEventListener("input", () => { character.birthTime = birthTimeInput.value || null; debouncedSave(); });
 
-  const moonInput = textInput(character.zodiac.moon, { placeholder: "Moon" });
-  moonInput.addEventListener("input", () => {
-    character.zodiac.moon = moonInput.value || null;
-    debouncedSave();
-  });
+  const placeInput = el("input", { type: "text", class: "sheet-input sheet-input--wide", placeholder: "Place of birth" });
+  placeInput.value = character.placeOfBirth ?? "";
+  placeInput.addEventListener("input", () => { character.placeOfBirth = placeInput.value; debouncedSave(); });
 
-  const risingInput = textInput(character.zodiac.rising, { placeholder: "Rising" });
-  risingInput.addEventListener("input", () => {
-    character.zodiac.rising = risingInput.value || null;
-    debouncedSave();
-  });
+  const moonSel = signSelect(character.zodiac.moon);
+  moonSel.addEventListener("change", () => { character.zodiac.moon = moonSel.value || null; debouncedSave(); });
+  const risingSel = signSelect(character.zodiac.rising);
+  risingSel.addEventListener("change", () => { character.zodiac.rising = risingSel.value || null; debouncedSave(); });
 
-  const identityBlock = el("section", { class: "sheet-section" }, [
+  const identitySection = el("section", { class: "sheet-section" }, [
     el("h3", { class: "sheet-section-title" }, ["Identity"]),
     el("div", { class: "sheet-row" }, [
       el("label", { class: "sheet-label" }, ["Age", ageInput]),
       el("label", { class: "sheet-label" }, ["Birthday", birthdayInput]),
+      el("label", { class: "sheet-label" }, ["Birth time", birthTimeInput]),
+      el("label", { class: "sheet-label" }, ["Place of birth", placeInput]),
     ]),
     el("div", { class: "sheet-row" }, [
-      el("label", { class: "sheet-label" }, ["Sun", sunInput]),
-      el("label", { class: "sheet-label" }, ["Moon", moonInput]),
-      el("label", { class: "sheet-label" }, ["Rising", risingInput]),
+      el("label", { class: "sheet-label" }, ["Sun ☀", sunDisplay]),
+      el("label", { class: "sheet-label" }, ["Moon ☽", moonSel]),
+      el("label", { class: "sheet-label" }, ["Rising ↑", risingSel]),
     ]),
   ]);
 
   // ── Summary ──
-  const summaryTa = sheetTextarea(character.summary);
-  summaryTa.addEventListener("input", () => {
-    character.summary = summaryTa.value;
+  const summaryTa = el("textarea", { class: "sheet-textarea", rows: "2", placeholder: "Short description shown on the card" });
+  summaryTa.value = character.summary ?? "";
+  summaryTa.addEventListener("input", () => { character.summary = summaryTa.value; debouncedSave(); });
+
+  // ── Background ──
+  const bgTa = el("textarea", { class: "sheet-textarea sheet-textarea--bg", placeholder: "Freeform background and story" });
+  bgTa.value = character.background ?? "";
+  bgTa.addEventListener("input", () => {
+    character.background = bgTa.value;
+    bgTa.style.height = "auto";
+    bgTa.style.height = bgTa.scrollHeight + "px";
     debouncedSave();
   });
 
-  // ── Sheet sections ──
-  function makeSheetSection(key, label) {
-    const ta = sheetTextarea(character.sheet[key]);
-    ta.addEventListener("input", () => {
-      character.sheet[key] = ta.value;
-      debouncedSave();
-    });
-    return el("section", { class: "sheet-section" }, [
-      el("h3", { class: "sheet-section-title" }, [label]),
-      ta,
-    ]);
-  }
-
   // ── Faction picker ──
   const factionPickerEl = el("div", { class: "faction-picker" });
-
-  function persistMembership() {
-    Promise.all([
-      save("characters", appData.characters),
-      save("factions", appData.factions),
-    ]).then(() => {
-      if (savedPill) savedPill.remove();
-      savedPill = el("span", { class: "saved-pill" }, ["Saved"]);
-      container.append(savedPill);
-      setTimeout(() => { savedPill?.remove(); savedPill = null; }, 2000);
-    });
-  }
 
   function renderFactionPicker() {
     clear(factionPickerEl);
     const chipRow = el("div", { class: "sheet-faction-chips" });
     if (character.factionIds?.length) {
       for (const fId of character.factionIds) {
-        const f = appData.factions.find(f2 => f2.id === fId);
+        const f    = appData.factions.find(f2 => f2.id === fId);
         const chip = el("span", { class: "faction-chip faction-chip--removable" }, [
-          el("a", { class: "faction-chip-name", href: `#/factions/${fId}` },
-            [f?.name ?? "Unknown"]),
+          el("a", { class: "faction-chip-name", href: `#/factions/${fId}` }, [f?.name ?? "Unknown"]),
           el("button", { class: "faction-chip-remove", onclick: () => removeFaction(fId) }, ["×"]),
         ]);
-        if (f?.color) {
-          chip.style.background = f.color;
-          chip.style.color = chipTextColor(f.color);
-        }
+        if (f?.color) { chip.style.background = f.color; chip.style.color = chipTextColor(f.color); }
         chipRow.append(chip);
       }
     } else {
       chipRow.append(el("span", { class: "sheet-empty-note" }, ["No factions assigned."]));
     }
-
     const available = appData.factions.filter(f => !character.factionIds?.includes(f.id));
     const addSelect = el("select", { class: "sheet-add-faction-select" });
     addSelect.append(el("option", { value: "" }, ["Add faction…"]));
-    for (const f of available) {
-      addSelect.append(el("option", { value: f.id }, [f.name]));
-    }
-    addSelect.addEventListener("change", () => {
-      if (!addSelect.value) return;
-      addFaction(addSelect.value);
-    });
-
+    for (const f of available) addSelect.append(el("option", { value: f.id }, [f.name]));
+    addSelect.addEventListener("change", () => { if (addSelect.value) addFaction(addSelect.value); });
     factionPickerEl.append(chipRow);
     if (available.length) factionPickerEl.append(addSelect);
   }
@@ -251,24 +250,99 @@ export function mountCharacterSheet(container, appData, id) {
 
   renderFactionPicker();
 
+  // ── Relationships ──
+  const relsEl = el("div", { class: "rels-list" });
+
+  function renderRelationships() {
+    clear(relsEl);
+    const mine = (appData.relationships ?? []).filter(r => r.from === character.id);
+    if (!mine.length) {
+      relsEl.append(el("p", { class: "sheet-empty-note" }, ["No relationships yet."]));
+      return;
+    }
+    for (const rel of mine) {
+      const other = appData.characters.find(c => c.id === rel.to);
+      relsEl.append(el("div", { class: "rel-row" }, [
+        el("a", { class: "rel-other-name", href: `#/characters/${rel.to}` }, [other ? displayName(other) : "Unknown"]),
+        el("span", { class: "rel-type" }, [` — ${rel.type} (${rel.closeness})`]),
+        el("button", { class: "btn-small", onclick: () => {
+          openRelationshipDialog(appData, character.id, rel.id, renderRelationships);
+        }}, ["Edit"]),
+        el("button", { class: "btn-small btn-small--danger", onclick: () => removeRel(rel) }, ["×"]),
+      ]));
+    }
+  }
+
+  function removeRel(rel) {
+    const other = appData.characters.find(c => c.id === rel.to);
+    const name  = other ? displayName(other) : "Unknown";
+    if (!confirm(`Remove relationship with ${name}?`)) return;
+    const recip = (appData.relationships ?? []).find(r => r.from === rel.to && r.to === rel.from);
+    let removeRecip = false;
+    if (recip) removeRecip = confirm(`Also remove the reciprocal from ${name}?`);
+    appData.relationships = appData.relationships.filter(r => {
+      if (r.id === rel.id) return false;
+      if (removeRecip && r.id === recip.id) return false;
+      return true;
+    });
+    save("relationships", appData.relationships);
+    renderRelationships();
+  }
+
+  renderRelationships();
+
+  function makeCard(title, content) {
+    return el("div", { class: "sheet-card" }, [
+      el("h3", { class: "sheet-card-title" }, [title]),
+      content,
+    ]);
+  }
+
+  function cardTa(key) {
+    const ta = el("textarea", { class: "sheet-textarea" });
+    ta.value = character.cards?.[key] ?? "";
+    ta.addEventListener("input", () => { character.cards[key] = ta.value; debouncedSave(); });
+    return ta;
+  }
+
   container.append(
     header,
-    el("div", { class: "sheet-body" }, [
-      identityBlock,
-      el("section", { class: "sheet-section" }, [
-        el("h3", { class: "sheet-section-title" }, ["Summary"]),
-        summaryTa,
+    el("div", { class: "sheet-layout" }, [
+      el("div", { class: "sheet-main" }, [
+        makeNameList(character, "previousNames", "Previous names", debouncedSave),
+        makeNameList(character, "aliases", "Aliases / codenames", debouncedSave),
+        identitySection,
+        el("section", { class: "sheet-section" }, [
+          el("h3", { class: "sheet-section-title" }, ["Summary"]),
+          summaryTa,
+        ]),
+        el("section", { class: "sheet-section" }, [
+          el("h3", { class: "sheet-section-title" }, ["Background"]),
+          bgTa,
+        ]),
+        el("section", { class: "sheet-section" }, [
+          el("h3", { class: "sheet-section-title" }, ["Factions"]),
+          factionPickerEl,
+        ]),
+        el("section", { class: "sheet-section" }, [
+          el("div", { class: "sheet-section-header" }, [
+            el("h3", { class: "sheet-section-title" }, ["Relationships"]),
+            el("button", { class: "btn-small", onclick: () => {
+              openRelationshipDialog(appData, character.id, null, renderRelationships);
+            }}, ["+ Add"]),
+          ]),
+          relsEl,
+        ]),
       ]),
-      makeSheetSection("secrets", "Secrets"),
-      makeSheetSection("family", "Family"),
-      makeSheetSection("skills", "Skills"),
-      makeSheetSection("fears", "Fears"),
-      makeSheetSection("weaknesses", "Weaknesses"),
-      makeSheetSection("notes", "Notes"),
-      el("section", { class: "sheet-section" }, [
-        el("h3", { class: "sheet-section-title" }, ["Factions"]),
-        factionPickerEl,
+      el("div", { class: "sheet-cards" }, [
+        makeCard("Current Plots", el("p", { class: "sheet-empty-note" }, ["No current plots."])),
+        makeCard("Skills",  cardTa("skills")),
+        makeCard("Secrets", cardTa("secrets")),
+        makeCard("Notes",   cardTa("notes")),
       ]),
     ])
   );
+
+  bgTa.style.height = "auto";
+  bgTa.style.height = (bgTa.scrollHeight || 320) + "px";
 }

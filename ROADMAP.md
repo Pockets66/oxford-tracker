@@ -45,6 +45,26 @@ Followups:
 - Owner select allows only a single owner; multi-owner ("Bree, Jack") must be typed manually into the data for now — a multi-select owner picker is a natural Slice 8 polish item.
 - `.btn-primary` and `.btn-danger` live in `characters.css` for now; move to a shared `buttons.css` when a second slice needs them.
 
+## Slice 2.5: Character sheet redesign + filter bar redesign + theme polish
+
+Schema migration (v1 → v2): drop `sheet`, add `background`, `cards`, `birthTime`, `placeOfBirth`. Two-column character sheet layout with large background canvas and side cards (Current Plots, Skills, Secrets, Notes). Relationship add/edit dialog writing to `relationships.json`. Owner filter rebuilt as five colored circular toggle chips. Faction filter rebuilt as dropdown-then-chip (OR semantics). Dark theme now default. Scrollbars, inputs, selects, textareas all styled to match the Oxford aesthetic.
+
+Prompt: `prompts/02b-sheet-and-filters.md`
+
+**Status: done** — 2026-06-17
+
+Followups:
+- Current Plots card is empty until Slice 7 adds character tags on plotlines.
+- The Relationship Web visualization (Slice 4) will visualize the edges written by this dialog.
+
+## Slice 2.6: Structured names and aliases
+
+Replace single `name` field with `firstName`, `middleName`, `lastName`, plus `previousNames[]` and `aliases[]` string arrays. `displayName(character)` helper used everywhere. Schema migration v2→v3 splits existing names on whitespace. Character sheet header shows three name inputs; expandable lists below for previous names and aliases. Character cards show `displayName` as title plus first alias as "a.k.a." line. Relationship dialog and faction-page character dropdowns show displayName + first alias in parentheses. Search (characters overview) matches across display name, aliases, and previous names.
+
+Prompt: `prompts/02c-names.md`
+
+**Status: done** — 2026-06-17
+
 ## Slice 3: Factions CRUD
 
 Factions tab with overview cards and per faction page. Add, edit, delete. Fields: name, agenda, leader (character link), members (character links), attached scenes and plotlines (populated later). Character cards now show real faction chips that link to faction pages.
@@ -59,7 +79,7 @@ Followups:
 
 ## Slice 4: Relationship Web
 
-Per character relationship view rendered with Cytoscape. Center node is the character. Connected nodes are linked characters. Each pair has two directional edges with labels (nature of the relationship from each side). Adding a relationship from A to B prompts for the reciprocal label and writes both edges. Clicking any other node re-centers the web on that character. A "Character Sheet" button on the web view closes it and routes to the sheet.
+Per character relationship view rendered with Cytoscape. Center node is the character. Connected nodes are linked characters. Each pair has two directional edges with labels (type and closeness from each side). Relationships are created and edited via the dialog added in Slice 2.5 — the web view only visualizes the edges already stored in `relationships.json`. Clicking any other node re-centers the web on that character. A "Character Sheet" button on the web view closes it and routes to the sheet.
 
 ## Slice 5: Faction Map
 

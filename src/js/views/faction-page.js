@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { syncFactionMembership } from "../schema.js";
+import { syncFactionMembership, displayName } from "../schema.js";
 
 function debounce(fn, delay) {
   let timer;
@@ -88,7 +88,7 @@ export function mountFactionPage(container, appData, id) {
   const leaderSelect = el("select", { class: "sheet-owner-select" });
   leaderSelect.append(el("option", { value: "" }, ["— No leader —"]));
   for (const c of appData.characters) {
-    const opt = el("option", { value: c.id }, [c.name || "Unnamed"]);
+    const opt = el("option", { value: c.id }, [displayName(c)]);
     if (faction.leaderId === c.id) opt.selected = true;
     leaderSelect.append(opt);
   }
@@ -98,7 +98,7 @@ export function mountFactionPage(container, appData, id) {
     if (faction.leaderId) {
       const leader = appData.characters.find(c => c.id === faction.leaderId);
       leaderLink.href = `#/characters/${faction.leaderId}`;
-      leaderLink.textContent = `→ ${leader?.name ?? "Unknown"}`;
+      leaderLink.textContent = `→ ${leader ? displayName(leader) : "Unknown"}`;
       leaderLink.style.display = "";
     } else {
       leaderLink.style.display = "none";
@@ -122,7 +122,7 @@ export function mountFactionPage(container, appData, id) {
         const character = appData.characters.find(c => c.id === memberId);
         chipRow.append(el("span", { class: "faction-member-chip" }, [
           el("a", { class: "faction-member-name", href: `#/characters/${memberId}` },
-            [character?.name ?? "Unknown"]),
+            [character ? displayName(character) : "Unknown"]),
           el("button", { class: "faction-chip-remove", onclick: () => removeMember(memberId) }, ["×"]),
         ]));
       }
@@ -134,7 +134,7 @@ export function mountFactionPage(container, appData, id) {
     const addSelect = el("select", { class: "sheet-add-faction-select" });
     addSelect.append(el("option", { value: "" }, ["Add member…"]));
     for (const c of nonMembers) {
-      addSelect.append(el("option", { value: c.id }, [c.name || "Unnamed"]));
+      addSelect.append(el("option", { value: c.id }, [displayName(c)]));
     }
     addSelect.addEventListener("change", () => {
       if (!addSelect.value) return;
