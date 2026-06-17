@@ -1,0 +1,144 @@
+import { el, clear } from "../dom.js";
+import { navigate } from "../router.js";
+import { save } from "../storage.js";
+import { createCharacter } from "../schema.js";
+import { createFilterBar } from "../filters.js";
+
+const OWNER_VARS = {
+  Bree:   "var(--owner-bree)",
+  Jack:   "var(--owner-jack)",
+  Nicole: "var(--owner-nicole)",
+  Caiden: "var(--owner-caiden)",
+  NPC:    "var(--owner-npc)",
+};
+
+function ownerBorderStyle(ownerStr) {
+  const owners = (ownerStr || "NPC").split(",").map(s => s.trim()).filter(Boolean);
+  if (owners.length <= 1) {
+    return OWNER_VARS[owners[0]] ?? "var(--owner-npc)";
+  }
+  const stops = owners.flatMap((o, i) => {
+    const pct  = (i / owners.length) * 100;
+    const next = ((i + 1) / owners.length) * 100;
+    const color = OWNER_VARS[o] ?? "var(--owner-npc)";
+    return [`${color} ${pct}%`, `${color} ${next}%`];
+  });
+  return `linear-gradient(to bottom, ${stops.join(", ")})`;
+}
+
+function applyFilters(characters, { search, facetValues }) {
+  let result = characters;
+
+  if (search) {
+    const q = search.toLowerCase();
+    result = result.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.summary.toLowerCase().includes(q)
+    );
+  }
+
+  const ownerFilter = facetValues.owner ?? [];
+  if (ownerFilter.length) {
+    result = result.filter(c => {
+      const owners = (c.owner || "NPC").split(",").map(s => s.trim());
+      return ownerFilter.some(o => owners.includes(o));
+    });
+  }
+
+  const factionFilter = facetValues.faction ?? [];
+  if (factionFilter.length) {
+    result = result.filter(c =>
+      factionFilter.some(fId => c.factionIds.includes(fId))
+    );
+  }
+
+  if (!facetValues.showDeceased) {
+    result = result.filter(c => !c.deceased);
+  }
+
+  return result;
+}
+
+function renderCard(character) {
+  const zodiacParts = [
+    character.zodiac?.sun,
+    character.zodiac?.moon,
+    character.zodiac?.rising,
+  ].filter(Boolean);
+
+  const card = el("article", {
+    class: "character-card" + (character.deceased ? " character-card--deceased" : ""),
+    "data-owner": character.owner || "NPC",
+  }, [
+    character.deceased ? el("span", { class: "character-deceased-tag" }, ["Deceased"]) : null,
+    el("h2", { class: "character-name" }, [character.name || "Unnamed"]),
+    (character.age || character.birthday) ? el("p", { class: "character-meta" }, [
+      [character.age ? `Age ${character.age}` : null, character.birthday || null]
+        .filter(Boolean).join(" · "),
+    ]) : null,
+    zodiacParts.length ? el("p", { class: "character-zodiac" }, [zodiacParts.join(" / ")]) : null,
+    el("span", { class: "character-owner-badge" }, [character.owner || "NPC"]),
+    character.summary ? el("p", { class: "character-summary" }, [character.summary]) : null,
+    character.factionIds?.length ? el("div", { class: "character-factions" }, [
+      ...character.factionIds.map(fId => el("span", { class: "faction-chip" }, [fId])),
+    ]) : null,
+  ]);
+
+  card.style.setProperty("--owner-border", ownerBorderStyle(character.owner));
+  card.addEventListener("click", () => navigate(`characters/${character.id}`));
+  return card;
+}
+
+export function mountCharacters(container, appData) {
+  async function handleNew() {
+    const character = createCharacter();
+    appData.characters.push(character);
+    await save("characters", appData.characters);
+    navigate(`characters/${character.id}`);
+  }
+
+  const filterBar = createFilterBar({
+    searchPlaceholder: "Search characters",
+    facets: [
+      {
+        id: "owner", label: "Owner", type: "multi",
+        options: ["Bree", "Jack", "Nicole", "Caiden", "NPC"],
+      },
+      {
+        id: "faction", label: "Faction", type: "multi",
+        options: (appData.factions ?? []).map(f => ({ value: f.id, label: f.name })),
+      },
+      {
+        id: "showDeceased", label: "Show deceased",
+        type: "toggle", defaultValue: true,
+      },
+    ],
+  });
+
+  const grid = el("div", { class: "character-grid" });
+  const initialState = {
+    search: "",
+    facetValues: { owner: [], faction: [], showDeceased: true },
+  };
+
+  function renderGrid(state) {
+    clear(grid);
+    const visible = applyFilters(appData.characters, state);
+    if (!visible.length) {
+      grid.append(el("p", { class: "character-empty" }, ["No characters match."]));
+    } else {
+      for (const c of visible) grid.append(renderCard(c));
+    }
+  }
+
+  filterBar.subscribe(state => renderGrid(state));
+  renderGrid(initialState);
+
+  container.append(
+    el("div", { class: "characters-toolbar" }, [
+      el("button", { class: "btn-primary", onclick: handleNew }, ["New character"]),
+    ]),
+    filterBar.node,
+    grid
+  );
+}

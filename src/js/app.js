@@ -1,6 +1,8 @@
 import { loadAll } from "./storage.js";
 import { navigate, initRouter } from "./router.js";
 import { qs, el, clear } from "./dom.js";
+import { mountCharacters } from "./views/characters.js";
+import { mountCharacterSheet } from "./views/character-sheet.js";
 
 const TABS = [
   { id: "characters", label: "Characters" },
@@ -11,20 +13,29 @@ const TABS = [
 ];
 
 const COMING_SLICE = {
-  characters: "Slice 2",
-  scenes:     "Slice 6",
-  plotlines:  "Slice 7",
-  factions:   "Slice 3",
-  anomalies:  "Slice 9",
+  scenes:    "Slice 6",
+  plotlines: "Slice 7",
+  factions:  "Slice 3",
+  anomalies: "Slice 9",
 };
 
 let appData = null;
 
 // ── View mounting ────────────────────────────────────────────────────────────
 
-function mountView(tab) {
+function mountView(tab, id) {
   const main = qs("#main");
   clear(main);
+
+  if (tab === "characters") {
+    if (id) {
+      mountCharacterSheet(main, appData, id);
+    } else {
+      mountCharacters(main, appData);
+    }
+    return;
+  }
+
   const label = TABS.find((t) => t.id === tab)?.label ?? tab;
   main.append(el("div", { class: "placeholder-view" }, [
     `${label} — coming in ${COMING_SLICE[tab] ?? "a future slice"}.`,
@@ -82,9 +93,9 @@ async function init() {
 
   // Listen for route changes.
   window.addEventListener("route-change", (e) => {
-    const { tab } = e.detail;
+    const { tab, id } = e.detail;
     setActiveTab(tab);
-    mountView(tab);
+    mountView(tab, id);
   });
 
   // Load data and boot.

@@ -38,6 +38,13 @@ Characters tab with overview card grid and per character detail page. Add, edit,
 
 Prompt: `prompts/02-characters.md`
 
+**Status: done** — 2026-06-17
+
+Followups:
+- Faction chips on the card and sheet show raw IDs until Slice 3 resolves names.
+- Owner select allows only a single owner; multi-owner ("Bree, Jack") must be typed manually into the data for now — a multi-select owner picker is a natural Slice 8 polish item.
+- `.btn-primary` and `.btn-danger` live in `characters.css` for now; move to a shared `buttons.css` when a second slice needs them.
+
 ## Slice 3: Factions CRUD
 
 Factions tab with overview cards and per faction page. Add, edit, delete. Fields: name, agenda, leader (character link), members (character links), attached scenes and plotlines (populated later). Character cards now show real faction chips that link to faction pages.
