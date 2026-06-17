@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { createCharacter, displayName } from "../schema.js";
+import { createCharacter, displayName, computeAge } from "../schema.js";
 import { createFilterBar } from "../filters.js";
 
 function chipTextColor(hex) {
@@ -71,12 +71,16 @@ function applyFilters(characters, { search, facetValues }) {
   return result;
 }
 
-function renderCard(character, factions) {
+function renderCard(character, factions, currentDate) {
   const zodiacParts = [
     character.zodiac?.sun,
     character.zodiac?.moon,
     character.zodiac?.rising,
   ].filter(Boolean);
+
+  const computed = computeAge(character, currentDate);
+  const displayAge = computed ?? (character.birthday ? null : character.age);
+  const ageLabel = character.deceased && character.deathDate ? "Age at death" : "Age";
 
   const card = el("article", {
     class: "character-card" + (character.deceased ? " character-card--deceased" : ""),
@@ -85,11 +89,7 @@ function renderCard(character, factions) {
     character.deceased ? el("span", { class: "character-deceased-tag" }, ["Deceased"]) : null,
     el("h2", { class: "character-name" }, [displayName(character)]),
     character.aliases?.length ? el("p", { class: "character-aka" }, [`a.k.a. ${character.aliases[0]}`]) : null,
-    (character.age || character.birthday) ? el("p", { class: "character-meta" }, [
-      [character.age ? `Age ${character.age}` : null, character.birthday || null]
-        .filter(Boolean).join(" · "),
-    ]) : null,
-
+    displayAge !== null ? el("p", { class: "character-meta" }, [`${ageLabel}: ${displayAge}`]) : null,
     zodiacParts.length ? el("p", { class: "character-zodiac" }, [zodiacParts.join(" / ")]) : null,
     el("span", { class: "character-owner-badge" }, [character.owner || "NPC"]),
     character.summary ? el("p", { class: "character-summary" }, [character.summary]) : null,
@@ -153,15 +153,25 @@ export function mountCharacters(container, appData) {
     facetValues: { owner: [...ALL_OWNERS], faction: [], showDeceased: true },
   };
 
+  let currentState = initialState;
+
   function renderGrid(state) {
+    currentState = state;
     clear(grid);
     const visible = applyFilters(appData.characters, state);
+    const currentDate = appData.meta?.currentDate ?? null;
     if (!visible.length) {
       grid.append(el("p", { class: "character-empty" }, ["No characters match."]));
     } else {
-      for (const c of visible) grid.append(renderCard(c, appData.factions));
+      for (const c of visible) grid.append(renderCard(c, appData.factions, currentDate));
     }
   }
+
+  function onDateChange() {
+    if (!grid.isConnected) { window.removeEventListener("current-date-change", onDateChange); return; }
+    renderGrid(currentState);
+  }
+  window.addEventListener("current-date-change", onDateChange);
 
   filterBar.subscribe(state => renderGrid(state));
   renderGrid(initialState);

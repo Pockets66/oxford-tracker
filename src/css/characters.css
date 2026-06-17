@@ -578,6 +578,23 @@
   opacity: 1;
 }
 
+/* ── Age computed display (read-only when birthday is set) ── */
+.sheet-age-computed {
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+}
+
+.sheet-age-caption {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-style: italic;
+  letter-spacing: 0.02em;
+  margin-top: 0.15rem;
+}
+
 /* ── Saved pill ── */
 .saved-pill {
   animation: pill-fade 2s ease forwards;

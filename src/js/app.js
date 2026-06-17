@@ -6,6 +6,7 @@ import { mountCharacterSheet } from "./views/character-sheet.js";
 import { mountFactions } from "./views/factions.js";
 import { mountFactionPage } from "./views/faction-page.js";
 import { migrateCharacters, migrateNamesToV3 } from "./schema.js";
+import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
 const TABS = [
   { id: "characters", label: "Characters" },
@@ -115,17 +116,65 @@ async function init() {
     let version = appData.meta?.schemaVersion ?? 1;
     if (version < 2) { migrateCharacters(appData.characters);  version = 2; }
     if (version < 3) { migrateNamesToV3(appData.characters);   version = 3; }
+
+    // Ensure deathDate exists on all characters (no version bump needed).
+    for (const c of appData.characters) {
+      if (!("deathDate" in c)) c.deathDate = null;
+    }
+
+    let needCharSave = false;
+    let needMetaSave = false;
+
     if ((appData.meta?.schemaVersion ?? 1) < version) {
       appData.meta = { ...appData.meta, schemaVersion: version };
-      await Promise.all([
-        save("characters", appData.characters),
-        save("meta", appData.meta),
-      ]);
+      needCharSave = true;
+      needMetaSave = true;
     }
+
+    if (!appData.meta?.currentDate) {
+      appData.meta = { ...appData.meta, currentDate: todayIso() };
+      needMetaSave = true;
+    }
+
+    const writes = [];
+    if (needCharSave) writes.push(save("characters", appData.characters));
+    if (needMetaSave) writes.push(save("meta", appData.meta));
+    if (writes.length) await Promise.all(writes);
+
+    // Wire date widget.
+    wireDateWidget();
+
     initRouter();
   } catch (err) {
     showBanner(`Could not load data: ${err.message}`);
   }
+}
+
+function wireDateWidget() {
+  const picker  = qs("#date-picker");
+  const dowEl   = qs("#date-dow");
+  const longEl  = qs("#date-long");
+  const prevBtn = qs("#date-prev");
+  const nextBtn = qs("#date-next");
+
+  function setDate(iso) {
+    appData.meta.currentDate = iso;
+    picker.value   = iso;
+    dowEl.textContent  = dayOfWeek(iso);
+    longEl.textContent = formatLongDate(iso);
+    save("meta", appData.meta);
+    window.dispatchEvent(new CustomEvent("current-date-change", { detail: { date: iso } }));
+  }
+
+  picker.addEventListener("change", () => { if (picker.value) setDate(picker.value); });
+  qs("#date-picker-btn").addEventListener("click", () => {
+    if (picker.showPicker) picker.showPicker();
+    else picker.click();
+  });
+  prevBtn.addEventListener("click", () => setDate(addDays(appData.meta.currentDate, -1)));
+  nextBtn.addEventListener("click", () => setDate(addDays(appData.meta.currentDate, +1)));
+
+  setDate(appData.meta.currentDate);
 }
 
 init();

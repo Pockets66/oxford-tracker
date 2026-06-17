@@ -77,6 +77,20 @@ Followups:
 - Faction-to-faction relationships (rivalries, alliances) not yet modelled. Add as a future slice.
 - The member select on the faction page lists all characters with no search; replace with a searchable dropdown in Slice 8 polish when the cast grows large.
 
+## Slice 2.7: Campaign current date + age auto-calculation + death date
+
+Campaign date lives in `meta.json` and is shown in the topbar with day-of-week, a date picker, and ±1 day arrows. Character ages auto-compute from birthday and the campaign date. Dead characters' ages freeze at their death date. Date changes re-render the character grid and open character sheet without a reload.
+
+Prompt: `prompts/02d-current-date.md`
+
+**Status: done** — 2026-06-17
+
+Visual polish (2.7.1): hid raw input, calendar SVG icon, day-of-week enlarged and centered.
+
+Followups:
+- Scenes will use `currentDate` for ordering/filtering in Slice 6.
+- Plotline timeline will reference `currentDate` as a "now" marker in Slice 7.
+
 ## Slice 4: Relationship Web
 
 Per character relationship view rendered with Cytoscape. Center node is the character. Connected nodes are linked characters. Each pair has two directional edges with labels (type and closeness from each side). Relationships are created and edited via the dialog added in Slice 2.5 — the web view only visualizes the edges already stored in `relationships.json`. Clicking any other node re-centers the web on that character. A "Character Sheet" button on the web view closes it and routes to the sheet.

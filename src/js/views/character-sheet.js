@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { syncFactionMembership, displayName } from "../schema.js";
+import { syncFactionMembership, displayName, computeAge } from "../schema.js";
 import { sunSignFromDate } from "../zodiac.js";
 import { openRelationshipDialog } from "./relationship-dialog.js";
 
@@ -106,6 +106,20 @@ export function mountCharacterSheet(container, appData, id) {
     save("characters", appData.characters).then(() => navigate("characters"));
   }
 
+  // ── Death date (defined early so deceasedCheck listener can reference it) ──
+  const deathDateInput = el("input", { type: "date", class: "sheet-input" });
+  deathDateInput.value = character.deathDate ?? "";
+  deathDateInput.addEventListener("input", () => {
+    character.deathDate = deathDateInput.value || null;
+    renderAgeField();
+    debouncedSave();
+  });
+
+  const deathDateRow = el("div", { class: "sheet-row" }, [
+    el("label", { class: "sheet-label" }, ["Death date", deathDateInput]),
+  ]);
+  deathDateRow.hidden = !character.deceased;
+
   // ── Header: name inputs ──
   const firstInput  = el("input", { type: "text", class: "sheet-name-part name-part--first",  placeholder: "First name" });
   const middleInput = el("input", { type: "text", class: "sheet-name-part name-part--middle", placeholder: "Middle" });
@@ -127,7 +141,16 @@ export function mountCharacterSheet(container, appData, id) {
 
   const deceasedCheck = el("input", { type: "checkbox", id: "sheet-deceased", class: "sheet-checkbox" });
   deceasedCheck.checked = !!character.deceased;
-  deceasedCheck.addEventListener("change", () => { character.deceased = deceasedCheck.checked; debouncedSave(); });
+  deceasedCheck.addEventListener("change", () => {
+    character.deceased = deceasedCheck.checked;
+    if (!character.deceased) {
+      character.deathDate = null;
+      deathDateInput.value = "";
+    }
+    deathDateRow.hidden = !character.deceased;
+    renderAgeField();
+    debouncedSave();
+  });
 
   const header = el("div", { class: "sheet-header" }, [
     el("a", { class: "sheet-back", href: "#/characters" }, ["← Characters"]),
@@ -139,22 +162,43 @@ export function mountCharacterSheet(container, appData, id) {
     ]),
   ]);
 
-  // ── Identity ──
-  const ageInput = el("input", { type: "number", class: "sheet-input sheet-input--narrow", placeholder: "Age", min: "0", max: "999" });
-  ageInput.value = character.age ?? "";
-  ageInput.addEventListener("input", () => {
-    character.age = ageInput.value !== "" ? Number(ageInput.value) : null;
-    debouncedSave();
-  });
+  // ── Age: mode-aware wrapper ──
+  const ageWrapper = el("label", { class: "sheet-label" }, ["Age"]);
 
+  function renderAgeField() {
+    // Remove all children except the label text node (first child).
+    while (ageWrapper.childNodes.length > 1) ageWrapper.removeChild(ageWrapper.lastChild);
+
+    if (character.birthday) {
+      const age = computeAge(character, appData.meta?.currentDate);
+      const caption = character.deathDate ? "Frozen at death" : "Auto-calculated from birthday";
+      ageWrapper.append(
+        el("span", { class: "sheet-age-computed" }, [age !== null ? String(age) : "?"]),
+        el("span", { class: "sheet-age-caption" }, [caption]),
+      );
+    } else {
+      const inp = el("input", { type: "number", class: "sheet-input sheet-input--narrow", placeholder: "Age", min: "0", max: "999" });
+      inp.value = character.age ?? "";
+      inp.addEventListener("input", () => {
+        character.age = inp.value !== "" ? Number(inp.value) : null;
+        debouncedSave();
+      });
+      ageWrapper.append(inp);
+    }
+  }
+
+  renderAgeField();
+
+  // ── Birthday ──
   const birthdayInput = el("input", { type: "date", class: "sheet-input" });
   birthdayInput.value = character.birthday ?? "";
 
   const sunDisplay = el("span", { class: "sheet-sun-display" }, [character.zodiac.sun ?? "—"]);
   birthdayInput.addEventListener("input", () => {
-    character.birthday     = birthdayInput.value || null;
-    character.zodiac.sun   = sunSignFromDate(character.birthday);
+    character.birthday   = birthdayInput.value || null;
+    character.zodiac.sun = sunSignFromDate(character.birthday);
     sunDisplay.textContent = character.zodiac.sun ?? "—";
+    renderAgeField();
     debouncedSave();
   });
 
@@ -174,17 +218,25 @@ export function mountCharacterSheet(container, appData, id) {
   const identitySection = el("section", { class: "sheet-section" }, [
     el("h3", { class: "sheet-section-title" }, ["Identity"]),
     el("div", { class: "sheet-row" }, [
-      el("label", { class: "sheet-label" }, ["Age", ageInput]),
+      ageWrapper,
       el("label", { class: "sheet-label" }, ["Birthday", birthdayInput]),
       el("label", { class: "sheet-label" }, ["Birth time", birthTimeInput]),
       el("label", { class: "sheet-label" }, ["Place of birth", placeInput]),
     ]),
+    deathDateRow,
     el("div", { class: "sheet-row" }, [
       el("label", { class: "sheet-label" }, ["Sun ☀", sunDisplay]),
       el("label", { class: "sheet-label" }, ["Moon ☽", moonSel]),
       el("label", { class: "sheet-label" }, ["Rising ↑", risingSel]),
     ]),
   ]);
+
+  // ── Subscribe to campaign date changes ──
+  function onDateChange() {
+    if (!container.isConnected) { window.removeEventListener("current-date-change", onDateChange); return; }
+    renderAgeField();
+  }
+  window.addEventListener("current-date-change", onDateChange);
 
   // ── Summary ──
   const summaryTa = el("textarea", { class: "sheet-textarea", rows: "2", placeholder: "Short description shown on the card" });

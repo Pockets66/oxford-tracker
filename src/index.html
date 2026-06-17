@@ -28,6 +28,26 @@
       <button class="tab-btn" data-tab="anomalies">Anomalies</button>
     </nav>
 
+    <div id="current-date-widget" class="current-date-widget">
+      <button id="date-prev" class="date-nudge" title="Previous day">&#8249;</button>
+      <div class="date-display">
+        <span id="date-dow" class="date-dow"></span>
+        <input type="date" id="date-picker" class="date-picker" />
+        <div class="date-pick-row">
+          <button id="date-picker-btn" class="date-picker-btn" title="Pick a date" aria-label="Pick a date">
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18"/>
+              <line x1="3" y1="9" x2="21" y2="9"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+            </svg>
+          </button>
+          <span id="date-long" class="date-long"></span>
+        </div>
+      </div>
+      <button id="date-next" class="date-nudge" title="Next day">&#8250;</button>
+    </div>
+
     <button id="theme-toggle" title="Toggle theme">&#9790;</button>
     <button id="settings-btn" title="Settings">&#9881;</button>
   </header>

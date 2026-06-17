@@ -16,6 +16,7 @@ export function createCharacter() {
     birthday: null,
     birthTime: null,
     placeOfBirth: "",
+    deathDate: null,
     zodiac: { sun: null, moon: null, rising: null },
     owner: "NPC",
     deceased: false,
@@ -26,6 +27,17 @@ export function createCharacter() {
     createdAt: now,
     updatedAt: now,
   };
+}
+
+export function computeAge(character, currentDateIso) {
+  if (!character.birthday) return null;
+  const asOf = character.deathDate ?? currentDateIso;
+  if (!asOf) return null;
+  const [by, bm, bd] = character.birthday.split("-").map(Number);
+  const [ay, am, ad] = asOf.split("-").map(Number);
+  let age = ay - by;
+  if (am < bm || (am === bm && ad < bd)) age--;
+  return age >= 0 ? age : null;
 }
 
 export function displayName(character) {
