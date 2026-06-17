@@ -54,6 +54,19 @@ function hideBanner() {
 // ── Boot ─────────────────────────────────────────────────────────────────
 
 async function init() {
+  // Theme toggle.
+  const savedTheme = localStorage.getItem("oxford-theme") || "light";
+  document.documentElement.dataset.theme = savedTheme;
+  const themeBtn = qs("#theme-toggle");
+  themeBtn.textContent = savedTheme === "dark" ? "☀" : "☾";
+  themeBtn.addEventListener("click", () => {
+    const current = document.documentElement.dataset.theme;
+    const next = current === "dark" ? "light" : "dark";
+    document.documentElement.dataset.theme = next;
+    themeBtn.textContent = next === "dark" ? "☀" : "☾";
+    localStorage.setItem("oxford-theme", next);
+  });
+
   // Wire tab clicks.
   for (const btn of document.querySelectorAll(".tab-btn")) {
     btn.addEventListener("click", () => navigate(btn.dataset.tab));

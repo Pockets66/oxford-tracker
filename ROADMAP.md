@@ -14,6 +14,8 @@ CSS overhaul plus a small theme toggle. Aged paper, Oxford blue, oxblood, gold l
 
 Prompt: `prompts/01b-oxford-styling.md`
 
+**Status: done** — 2026-06-17
+
 ## Slice 1.6: Electron conversion
 
 Wrap the app as a native desktop application. Replace File System Access API with Node fs through a secure preload bridge. Data folder is automatic, no permission prompts. Removes welcome overlay. Adds `npm start` and a Windows installer build.
