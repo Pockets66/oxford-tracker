@@ -1,0 +1,37 @@
+{
+  "name": "oxford-tracker",
+  "version": "0.1.0",
+  "description": "Local desktop app for tracking the Oxford RP campaign",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win"
+  },
+  "devDependencies": {
+    "electron": "^32.0.0",
+    "electron-builder": "^25.0.0"
+  },
+  "build": {
+    "appId": "com.oxford.tracker",
+    "productName": "Oxford Tracker",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "src/**/*",
+      "!src/data/**"
+    ],
+    "extraResources": [
+      {
+        "from": "src/data",
+        "to": "seed-data"
+      }
+    ],
+    "win": {
+      "target": "nsis"
+    }
+  }
+}

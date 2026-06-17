@@ -1,4 +1,4 @@
-import { connectFolder, restoreFolder, loadAll } from "./storage.js";
+import { loadAll } from "./storage.js";
 import { navigate, initRouter } from "./router.js";
 import { qs, el, clear } from "./dom.js";
 
@@ -18,7 +18,6 @@ const COMING_SLICE = {
   anomalies:  "Slice 9",
 };
 
-let folderHandle = null;
 let appData = null;
 
 // ── View mounting ────────────────────────────────────────────────────────────
@@ -52,24 +51,7 @@ function hideBanner() {
   qs("#error-banner").classList.remove("visible");
 }
 
-// ── Welcome overlay ──────────────────────────────────────────────────────
-
-function showWelcome() {
-  qs("#welcome").classList.add("visible");
-}
-
-function hideWelcome() {
-  qs("#welcome").classList.remove("visible");
-}
-
 // ── Boot ─────────────────────────────────────────────────────────────────
-
-async function boot(handle) {
-  folderHandle = handle;
-  appData = await loadAll(handle);
-  hideWelcome();
-  initRouter();
-}
 
 async function init() {
   // Wire tab clicks.
@@ -77,32 +59,12 @@ async function init() {
     btn.addEventListener("click", () => navigate(btn.dataset.tab));
   }
 
-  // Wire settings button (open/switch folder).
-  qs("#settings-btn").addEventListener("click", async () => {
-    try {
-      const handle = await connectFolder();
-      await boot(handle);
-    } catch (err) {
-      if (err.name !== "AbortError") showBanner(`Could not open folder: ${err.message}`);
-    }
-  });
-
   // Wire error banner dismiss.
   qs("#banner-dismiss").addEventListener("click", hideBanner);
 
-  // Wire welcome button.
-  qs("#open-folder-btn").addEventListener("click", async () => {
-    try {
-      const handle = await connectFolder();
-      await boot(handle);
-    } catch (err) {
-      if (err.name !== "AbortError") showBanner(`Could not open folder: ${err.message}`);
-    }
-  });
-
   // Listen for storage errors.
   window.addEventListener("storage-error", (e) => {
-    showBanner(`Save failed (${e.detail.entityType}): ${e.detail.message}`);
+    showBanner(`Storage error (${e.detail.entityType}): ${e.detail.message}`);
   });
 
   // Listen for route changes.
@@ -112,17 +74,12 @@ async function init() {
     mountView(tab);
   });
 
-  // Try to restore an existing folder.
+  // Load data and boot.
   try {
-    const handle = await restoreFolder();
-    if (handle) {
-      await boot(handle);
-    } else {
-      showWelcome();
-    }
+    appData = await loadAll();
+    initRouter();
   } catch (err) {
-    showWelcome();
-    showBanner(`Could not restore folder: ${err.message}`);
+    showBanner(`Could not load data: ${err.message}`);
   }
 }
 

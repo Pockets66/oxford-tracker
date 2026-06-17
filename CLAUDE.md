@@ -1,14 +1,15 @@
 # Oxford Tracker
 
-A local web app for tracking characters, scenes, plotlines, factions, and anomalies in the Oxford RP setting. Single user, runs in the browser, stores data as JSON files on disk via the File System Access API.
+A local desktop app (Electron) for tracking characters, scenes, plotlines, factions, and anomalies in the Oxford RP setting. Single user, runs in its own window, stores data as JSON files in a `user-data/` folder next to the app.
 
 ## Stack
 
-Vanilla HTML, CSS, and JavaScript. No build step, no bundler, no framework. Libraries pulled in via CDN or vendored into `src/vendor/`:
+Electron shell wrapping vanilla HTML, CSS, and JavaScript. No build step for the renderer, no bundler, no framework. Libraries pulled in via CDN or vendored into `src/vendor/`:
 
 - **Cytoscape.js** for the relationship web and faction graph
 - **vis-timeline** for plotline timelines
-- That is it. Do not add React, Vue, Tailwind, or any other dependency without being asked.
+
+The main process (`main.js`) is plain Node. The preload (`preload.js`) exposes a narrow `window.oxford` API to the renderer. Do not add React, Vue, Tailwind, or any other dependency without being asked.
 
 ## File layout
 
@@ -16,15 +17,17 @@ Vanilla HTML, CSS, and JavaScript. No build step, no bundler, no framework. Libr
 oxford-tracker/
   CLAUDE.md           you are here
   ROADMAP.md          slice list, current status, what is next
+  package.json        Electron entry, scripts, build config
+  main.js             Electron main process (window + IPC handlers)
+  preload.js          secure bridge to renderer
   prompts/            one .md per slice, fed to you as the work order
   src/
     index.html        single page, tab shell
     css/              one file per major area
-    js/              one module per major area, plus storage.js and app.js
+    js/               one module per major area, plus storage.js and app.js
     data/             seed JSON shipped with the repo
   user-data/          gitignored, where the running app writes
   .gitignore
-  README.md
 ```
 
 ## How work happens
@@ -74,9 +77,9 @@ The user chose a clustered graph instead of a real Venn. Factions render as larg
 
 ## Save behavior
 
-Every mutation writes the affected JSON file immediately. No save button. If the File System Access API write fails (permission revoked, folder moved), surface a banner at the top of the app and pause further mutations until the user re-grants access.
+Every mutation writes the affected JSON file immediately. No save button. The renderer calls `storage.save(entityType, data)` which uses the `window.oxford` bridge to invoke a Node `fs.writeFile` in the main process. If a write fails, surface a banner at the top of the app.
 
-On first load, if no data folder is connected, show a welcome screen with one button: "Open project folder". After they pick one, if it is empty, copy the contents of `src/data/` into it as seed data.
+The data folder is created and seeded automatically on first launch. There is no folder picker. In development the folder is `<repo>/user-data/`. In a packaged build it sits next to the installed exe.
 
 ## Coding conventions
 

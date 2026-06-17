@@ -8,11 +8,27 @@ Tab shell, File System Access integration, JSON read/write plumbing, empty data 
 
 Prompt: `prompts/01-scaffolding.md`
 
+## Slice 1.5: Oxford aesthetic pass
+
+CSS overhaul plus a small theme toggle. Aged paper, Oxford blue, oxblood, gold leaf. Serif headings. Light and dark themes both supported. JS untouched except for theme persistence.
+
+Prompt: `prompts/01b-oxford-styling.md`
+
+## Slice 1.6: Electron conversion
+
+Wrap the app as a native desktop application. Replace File System Access API with Node fs through a secure preload bridge. Data folder is automatic, no permission prompts. Removes welcome overlay. Adds `npm start` and a Windows installer build.
+
+Prompt: `prompts/01c-electron.md`
+
 **Status: done** — 2026-06-17
 
 Followups:
-- `filters.js` multi-select uses a native `<select multiple>` for now; replace with a custom dropdown in Slice 6 if it feels clunky.
-- Settings button (gear) opens a new folder via the same `connectFolder()` path — no confirmation dialog before switching. Add one in Slice 8 if needed.
+- App icon deferred — add `src/assets/icon.ico` and uncomment the `icon` line in `package.json` when ready.
+- Settings view (gear button currently wired to nothing): display data folder path, export/import shortcuts, app version. Add as a future slice.
+
+## Future slice: Settings view
+
+Data folder location display, theme override, export/import shortcuts, app version display. Settings button in the topbar routes here.
 
 ## Slice 2: Characters CRUD
 
