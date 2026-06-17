@@ -51,6 +51,12 @@ Factions tab with overview cards and per faction page. Add, edit, delete. Fields
 
 Prompt: `prompts/03-factions.md`
 
+**Status: done** — 2026-06-17
+
+Followups:
+- Faction-to-faction relationships (rivalries, alliances) not yet modelled. Add as a future slice.
+- The member select on the faction page lists all characters with no search; replace with a searchable dropdown in Slice 8 polish when the cast grows large.
+
 ## Slice 4: Relationship Web
 
 Per character relationship view rendered with Cytoscape. Center node is the character. Connected nodes are linked characters. Each pair has two directional edges with labels (nature of the relationship from each side). Adding a relationship from A to B prompts for the reciprocal label and writes both edges. Clicking any other node re-centers the web on that character. A "Character Sheet" button on the web view closes it and routes to the sheet.

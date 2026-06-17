@@ -3,6 +3,8 @@ import { navigate, initRouter } from "./router.js";
 import { qs, el, clear } from "./dom.js";
 import { mountCharacters } from "./views/characters.js";
 import { mountCharacterSheet } from "./views/character-sheet.js";
+import { mountFactions } from "./views/factions.js";
+import { mountFactionPage } from "./views/faction-page.js";
 
 const TABS = [
   { id: "characters", label: "Characters" },
@@ -15,7 +17,6 @@ const TABS = [
 const COMING_SLICE = {
   scenes:    "Slice 6",
   plotlines: "Slice 7",
-  factions:  "Slice 3",
   anomalies: "Slice 9",
 };
 
@@ -32,6 +33,15 @@ function mountView(tab, id) {
       mountCharacterSheet(main, appData, id);
     } else {
       mountCharacters(main, appData);
+    }
+    return;
+  }
+
+  if (tab === "factions") {
+    if (id) {
+      mountFactionPage(main, appData, id);
+    } else {
+      mountFactions(main, appData);
     }
     return;
   }

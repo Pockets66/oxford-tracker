@@ -4,6 +4,14 @@ import { save } from "../storage.js";
 import { createCharacter } from "../schema.js";
 import { createFilterBar } from "../filters.js";
 
+function chipTextColor(hex) {
+  if (!hex || hex.length < 7) return "#f4ecd8";
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#2a1f15" : "#f4ecd8";
+}
+
 const OWNER_VARS = {
   Bree:   "var(--owner-bree)",
   Jack:   "var(--owner-jack)",
@@ -59,7 +67,7 @@ function applyFilters(characters, { search, facetValues }) {
   return result;
 }
 
-function renderCard(character) {
+function renderCard(character, factions) {
   const zodiacParts = [
     character.zodiac?.sun,
     character.zodiac?.moon,
@@ -80,7 +88,19 @@ function renderCard(character) {
     el("span", { class: "character-owner-badge" }, [character.owner || "NPC"]),
     character.summary ? el("p", { class: "character-summary" }, [character.summary]) : null,
     character.factionIds?.length ? el("div", { class: "character-factions" }, [
-      ...character.factionIds.map(fId => el("span", { class: "faction-chip" }, [fId])),
+      ...character.factionIds.map(fId => {
+        const f = factions?.find(f2 => f2.id === fId);
+        const chip = el("a", {
+          class: "faction-chip faction-chip--link",
+          href: `#/factions/${fId}`,
+        }, [f?.name ?? "Unknown"]);
+        if (f?.color) {
+          chip.style.background = f.color;
+          chip.style.color = chipTextColor(f.color);
+        }
+        chip.addEventListener("click", e => e.stopPropagation());
+        return chip;
+      }),
     ]) : null,
   ]);
 
@@ -127,7 +147,7 @@ export function mountCharacters(container, appData) {
     if (!visible.length) {
       grid.append(el("p", { class: "character-empty" }, ["No characters match."]));
     } else {
-      for (const c of visible) grid.append(renderCard(c));
+      for (const c of visible) grid.append(renderCard(c, appData.factions));
     }
   }
 

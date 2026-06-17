@@ -1,8 +1,17 @@
-import { el } from "../dom.js";
+import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
+import { syncFactionMembership } from "../schema.js";
 
 const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
+
+function chipTextColor(hex) {
+  if (!hex || hex.length < 7) return "#f4ecd8";
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#2a1f15" : "#f4ecd8";
+}
 
 function debounce(fn, delay) {
   let timer;
@@ -170,12 +179,77 @@ export function mountCharacterSheet(container, appData, id) {
     ]);
   }
 
-  // ── Factions (read-only until Slice 3) ──
-  const factionsContent = character.factionIds?.length
-    ? el("div", { class: "sheet-faction-chips" }, [
-        ...character.factionIds.map(fId => el("span", { class: "faction-chip" }, [fId])),
-      ])
-    : el("p", { class: "sheet-empty-note" }, ["No factions assigned."]);
+  // ── Faction picker ──
+  const factionPickerEl = el("div", { class: "faction-picker" });
+
+  function persistMembership() {
+    Promise.all([
+      save("characters", appData.characters),
+      save("factions", appData.factions),
+    ]).then(() => {
+      if (savedPill) savedPill.remove();
+      savedPill = el("span", { class: "saved-pill" }, ["Saved"]);
+      container.append(savedPill);
+      setTimeout(() => { savedPill?.remove(); savedPill = null; }, 2000);
+    });
+  }
+
+  function renderFactionPicker() {
+    clear(factionPickerEl);
+    const chipRow = el("div", { class: "sheet-faction-chips" });
+    if (character.factionIds?.length) {
+      for (const fId of character.factionIds) {
+        const f = appData.factions.find(f2 => f2.id === fId);
+        const chip = el("span", { class: "faction-chip faction-chip--removable" }, [
+          el("a", { class: "faction-chip-name", href: `#/factions/${fId}` },
+            [f?.name ?? "Unknown"]),
+          el("button", { class: "faction-chip-remove", onclick: () => removeFaction(fId) }, ["×"]),
+        ]);
+        if (f?.color) {
+          chip.style.background = f.color;
+          chip.style.color = chipTextColor(f.color);
+        }
+        chipRow.append(chip);
+      }
+    } else {
+      chipRow.append(el("span", { class: "sheet-empty-note" }, ["No factions assigned."]));
+    }
+
+    const available = appData.factions.filter(f => !character.factionIds?.includes(f.id));
+    const addSelect = el("select", { class: "sheet-add-faction-select" });
+    addSelect.append(el("option", { value: "" }, ["Add faction…"]));
+    for (const f of available) {
+      addSelect.append(el("option", { value: f.id }, [f.name]));
+    }
+    addSelect.addEventListener("change", () => {
+      if (!addSelect.value) return;
+      addFaction(addSelect.value);
+    });
+
+    factionPickerEl.append(chipRow);
+    if (available.length) factionPickerEl.append(addSelect);
+  }
+
+  function addFaction(fId) {
+    const f = appData.factions.find(f2 => f2.id === fId);
+    if (!f || f.memberIds.includes(character.id)) return;
+    f.memberIds.push(character.id);
+    syncFactionMembership(appData.characters, appData.factions);
+    persistMembership();
+    renderFactionPicker();
+  }
+
+  function removeFaction(fId) {
+    const f = appData.factions.find(f2 => f2.id === fId);
+    if (!f) return;
+    const idx = f.memberIds.indexOf(character.id);
+    if (idx !== -1) f.memberIds.splice(idx, 1);
+    syncFactionMembership(appData.characters, appData.factions);
+    persistMembership();
+    renderFactionPicker();
+  }
+
+  renderFactionPicker();
 
   container.append(
     header,
@@ -193,7 +267,7 @@ export function mountCharacterSheet(container, appData, id) {
       makeSheetSection("notes", "Notes"),
       el("section", { class: "sheet-section" }, [
         el("h3", { class: "sheet-section-title" }, ["Factions"]),
-        factionsContent,
+        factionPickerEl,
       ]),
     ])
   );
