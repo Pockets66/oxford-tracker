@@ -1,0 +1,68 @@
+/* ── Relationship web modal ── */
+.rweb-backdrop {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: fixed;
+  z-index: 1500;
+}
+
+.rweb-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--gold);
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  width: 90vw;
+}
+
+.rweb-topbar {
+  align-items: center;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 0.6rem 1rem;
+}
+
+.rweb-title {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.4rem;
+  font-weight: 500;
+}
+
+.rweb-topbar-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.rweb-body {
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.rweb-canvas {
+  height: 100%;
+  width: 100%;
+}
+
+/* ── Edge feelings tooltip ── */
+.rweb-tooltip {
+  background: var(--bg-raised);
+  border: 1px solid var(--gold);
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  font-style: italic;
+  padding: 0.3rem 0.6rem;
+  pointer-events: none;
+  position: fixed;
+  white-space: nowrap;
+  z-index: 2100;
+}

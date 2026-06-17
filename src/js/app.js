@@ -5,7 +5,7 @@ import { mountCharacters } from "./views/characters.js";
 import { mountCharacterSheet } from "./views/character-sheet.js";
 import { mountFactions } from "./views/factions.js";
 import { mountFactionPage } from "./views/faction-page.js";
-import { migrateCharacters, migrateNamesToV3 } from "./schema.js";
+import { migrateCharacters, migrateNamesToV3, migrateToV4 } from "./schema.js";
 import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
 const TABS = [
@@ -116,18 +116,16 @@ async function init() {
     let version = appData.meta?.schemaVersion ?? 1;
     if (version < 2) { migrateCharacters(appData.characters);  version = 2; }
     if (version < 3) { migrateNamesToV3(appData.characters);   version = 3; }
-
-    // Ensure deathDate exists on all characters (no version bump needed).
-    for (const c of appData.characters) {
-      if (!("deathDate" in c)) c.deathDate = null;
-    }
+    if (version < 4) { migrateToV4(appData.characters, appData.relationships); version = 4; }
 
     let needCharSave = false;
+    let needRelSave  = false;
     let needMetaSave = false;
 
     if ((appData.meta?.schemaVersion ?? 1) < version) {
       appData.meta = { ...appData.meta, schemaVersion: version };
       needCharSave = true;
+      needRelSave  = true;
       needMetaSave = true;
     }
 
@@ -138,6 +136,7 @@ async function init() {
 
     const writes = [];
     if (needCharSave) writes.push(save("characters", appData.characters));
+    if (needRelSave)  writes.push(save("relationships", appData.relationships));
     if (needMetaSave) writes.push(save("meta", appData.meta));
     if (writes.length) await Promise.all(writes);
 

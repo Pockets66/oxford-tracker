@@ -97,10 +97,34 @@
 }
 
 .rel-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.rel-row-main {
   align-items: center;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.rel-row-feelings {
+  color: var(--text-muted);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.85rem;
+  font-style: italic;
+  padding-left: 0.1rem;
+}
+
+.rel-row--frozen {
+  opacity: 0.55;
+}
+
+.rel-row--frozen .btn-small:not(.btn-small--danger) {
+  pointer-events: none;
+  border-color: var(--border);
+  color: var(--text-muted);
 }
 
 .rel-other-name {
@@ -121,6 +145,13 @@
   flex: 1;
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.8rem;
+}
+
+/* ── Alias primary checkbox ── */
+.alias-primary-check {
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 0.15rem;
 }
 
 /* ── Small action buttons ── */

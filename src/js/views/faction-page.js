@@ -2,6 +2,7 @@ import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
 import { syncFactionMembership, displayName } from "../schema.js";
+import { createCombobox } from "../components/combobox.js";
 
 function debounce(fn, delay) {
   let timer;
@@ -84,14 +85,8 @@ export function mountFactionPage(container, appData, id) {
   notesTa.value = faction.notes ?? "";
   notesTa.addEventListener("input", () => { faction.notes = notesTa.value; debouncedSave(); });
 
-  // ── Leader ──
-  const leaderSelect = el("select", { class: "sheet-owner-select" });
-  leaderSelect.append(el("option", { value: "" }, ["— No leader —"]));
-  for (const c of appData.characters) {
-    const opt = el("option", { value: c.id }, [displayName(c)]);
-    if (faction.leaderId === c.id) opt.selected = true;
-    leaderSelect.append(opt);
-  }
+  // ── Leader (searchable combobox) ──
+  const sortedChars = [...appData.characters].sort((a, b) => displayName(a).localeCompare(displayName(b)));
 
   const leaderLink = el("a", { class: "faction-leader-link" });
   function updateLeaderLink() {
@@ -105,10 +100,19 @@ export function mountFactionPage(container, appData, id) {
     }
   }
   updateLeaderLink();
-  leaderSelect.addEventListener("change", () => {
-    faction.leaderId = leaderSelect.value || null;
-    updateLeaderLink();
-    debouncedSave();
+
+  const leaderCb = createCombobox({
+    items: [
+      { value: "", label: "— No leader —" },
+      ...sortedChars.map(c => ({ value: c.id, label: displayName(c) })),
+    ],
+    value: faction.leaderId ?? "",
+    placeholder: "Select leader…",
+    onChange: (val) => {
+      faction.leaderId = val || null;
+      updateLeaderLink();
+      debouncedSave();
+    },
   });
 
   // ── Members ──
@@ -129,20 +133,19 @@ export function mountFactionPage(container, appData, id) {
     } else {
       chipRow.append(el("span", { class: "sheet-empty-note" }, ["No members yet."]));
     }
+    membersEl.append(chipRow);
 
     const nonMembers = appData.characters.filter(c => !faction.memberIds.includes(c.id));
-    const addSelect = el("select", { class: "sheet-add-faction-select" });
-    addSelect.append(el("option", { value: "" }, ["Add member…"]));
-    for (const c of nonMembers) {
-      addSelect.append(el("option", { value: c.id }, [displayName(c)]));
+    if (nonMembers.length) {
+      const sorted = [...nonMembers].sort((a, b) => displayName(a).localeCompare(displayName(b)));
+      const cb = createCombobox({
+        items: sorted.map(c => ({ value: c.id, label: displayName(c) })),
+        value: "",
+        placeholder: "Add member…",
+        onChange: (charId) => { if (charId) addMember(charId); },
+      });
+      membersEl.append(cb);
     }
-    addSelect.addEventListener("change", () => {
-      if (!addSelect.value) return;
-      addMember(addSelect.value);
-    });
-
-    membersEl.append(chipRow);
-    if (nonMembers.length) membersEl.append(addSelect);
   }
 
   function addMember(charId) {
@@ -176,7 +179,7 @@ export function mountFactionPage(container, appData, id) {
       ]),
       el("section", { class: "sheet-section" }, [
         el("h3", { class: "sheet-section-title" }, ["Leader"]),
-        el("div", { class: "sheet-row" }, [leaderSelect, leaderLink]),
+        el("div", { class: "sheet-row" }, [leaderCb, leaderLink]),
       ]),
       el("section", { class: "sheet-section" }, [
         el("h3", { class: "sheet-section-title" }, ["Members"]),

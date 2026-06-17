@@ -1,0 +1,71 @@
+/* ── Combobox (searchable dropdown) ── */
+.combobox {
+  position: relative;
+  width: 100%;
+}
+
+.combobox-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.35rem 1.75rem 0.35rem 0.5rem;
+  width: 100%;
+}
+
+.combobox-input:focus {
+  outline: 1px solid var(--gold);
+  box-shadow: 0 0 0 3px var(--gold-soft);
+}
+
+.combobox-chevron {
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  right: 0.5rem;
+  top: 50%;
+  transform: translateY(-50%);
+  user-select: none;
+}
+
+.combobox-dropdown {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  left: 0;
+  max-height: 240px;
+  overflow-y: auto;
+  position: absolute;
+  right: 0;
+  scrollbar-color: var(--border) transparent;
+  scrollbar-width: thin;
+  top: 100%;
+  z-index: 200;
+}
+
+.combobox-option {
+  color: var(--text);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.4rem 0.6rem;
+  transition: background 0.08s;
+}
+
+.combobox-option:hover,
+.combobox-option--active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.combobox-empty {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  font-style: italic;
+  padding: 0.5rem 0.6rem;
+}

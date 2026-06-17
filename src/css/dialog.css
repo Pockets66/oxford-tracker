@@ -112,6 +112,29 @@
   user-select: none;
 }
 
+/* ── Social labels multi-check grid ── */
+.dialog-social-labels {
+  display: grid;
+  gap: 0.35rem 1rem;
+  grid-template-columns: 1fr 1fr;
+}
+
+.dialog-social-label {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  gap: 0.35rem;
+  user-select: none;
+}
+
+.dialog-social-check {
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
 /* Secondary (neutral) button — used in dialogs */
 .btn-secondary {
   background: none;

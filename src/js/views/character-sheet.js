@@ -4,6 +4,7 @@ import { save } from "../storage.js";
 import { syncFactionMembership, displayName, computeAge } from "../schema.js";
 import { sunSignFromDate } from "../zodiac.js";
 import { openRelationshipDialog } from "./relationship-dialog.js";
+import { createCombobox } from "../components/combobox.js";
 
 const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
 const SIGNS  = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -33,7 +34,8 @@ function signSelect(value) {
   return sel;
 }
 
-function makeNameList(ch, key, label, onSave) {
+// opts.withPrimary: true → show alias-as-primary checkbox per chip
+function makeNameList(ch, key, label, onSave, opts = {}) {
   const summaryEl = el("summary", { class: "name-list-summary" });
   const chipsEl   = el("div",    { class: "name-chips" });
   const addInput  = el("input",  { type: "text", class: "sheet-input", placeholder: "Add…" });
@@ -43,14 +45,32 @@ function makeNameList(ch, key, label, onSave) {
   function render() {
     summaryEl.textContent = `${label} (${(ch[key] ?? []).length})`;
     clear(chipsEl);
-    (ch[key] ?? []).forEach((v, i) => chipsEl.append(
-      el("span", { class: "name-chip" }, [
-        v,
-        el("button", { class: "name-chip-remove", onclick: () => {
-          ch[key].splice(i, 1); onSave(); render();
-        }}, ["×"]),
-      ])
-    ));
+    (ch[key] ?? []).forEach((v, i) => {
+      const removeBtn = el("button", { class: "name-chip-remove" }, ["×"]);
+      removeBtn.addEventListener("click", () => {
+        if (opts.withPrimary) {
+          if (ch.displayAliasIndex === i) ch.displayAliasIndex = null;
+          else if (ch.displayAliasIndex != null && ch.displayAliasIndex > i) ch.displayAliasIndex--;
+        }
+        ch[key].splice(i, 1);
+        onSave();
+        render();
+      });
+
+      const chipChildren = [];
+      if (opts.withPrimary) {
+        const primaryCheck = el("input", { type: "checkbox", class: "alias-primary-check", title: "Use as primary display name" });
+        primaryCheck.checked = ch.displayAliasIndex === i;
+        primaryCheck.addEventListener("change", () => {
+          ch.displayAliasIndex = primaryCheck.checked ? i : null;
+          onSave();
+          render();
+        });
+        chipChildren.push(primaryCheck);
+      }
+      chipChildren.push(v, removeBtn);
+      chipsEl.append(el("span", { class: "name-chip" }, chipChildren));
+    });
   }
 
   function add() {
@@ -106,7 +126,7 @@ export function mountCharacterSheet(container, appData, id) {
     save("characters", appData.characters).then(() => navigate("characters"));
   }
 
-  // ── Death date (defined early so deceasedCheck listener can reference it) ──
+  // ── Death date (defined early so deceasedCheck listener can close over it) ──
   const deathDateInput = el("input", { type: "date", class: "sheet-input" });
   deathDateInput.value = character.deathDate ?? "";
   deathDateInput.addEventListener("input", () => {
@@ -166,11 +186,9 @@ export function mountCharacterSheet(container, appData, id) {
   const ageWrapper = el("label", { class: "sheet-label" }, ["Age"]);
 
   function renderAgeField() {
-    // Remove all children except the label text node (first child).
     while (ageWrapper.childNodes.length > 1) ageWrapper.removeChild(ageWrapper.lastChild);
-
     if (character.birthday) {
-      const age = computeAge(character, appData.meta?.currentDate);
+      const age     = computeAge(character, appData.meta?.currentDate);
       const caption = character.deathDate ? "Frozen at death" : "Auto-calculated from birthday";
       ageWrapper.append(
         el("span", { class: "sheet-age-computed" }, [age !== null ? String(age) : "?"]),
@@ -179,10 +197,7 @@ export function mountCharacterSheet(container, appData, id) {
     } else {
       const inp = el("input", { type: "number", class: "sheet-input sheet-input--narrow", placeholder: "Age", min: "0", max: "999" });
       inp.value = character.age ?? "";
-      inp.addEventListener("input", () => {
-        character.age = inp.value !== "" ? Number(inp.value) : null;
-        debouncedSave();
-      });
+      inp.addEventListener("input", () => { character.age = inp.value !== "" ? Number(inp.value) : null; debouncedSave(); });
       ageWrapper.append(inp);
     }
   }
@@ -253,7 +268,7 @@ export function mountCharacterSheet(container, appData, id) {
     debouncedSave();
   });
 
-  // ── Faction picker ──
+  // ── Faction picker (combobox) ──
   const factionPickerEl = el("div", { class: "faction-picker" });
 
   function renderFactionPicker() {
@@ -272,13 +287,19 @@ export function mountCharacterSheet(container, appData, id) {
     } else {
       chipRow.append(el("span", { class: "sheet-empty-note" }, ["No factions assigned."]));
     }
-    const available = appData.factions.filter(f => !character.factionIds?.includes(f.id));
-    const addSelect = el("select", { class: "sheet-add-faction-select" });
-    addSelect.append(el("option", { value: "" }, ["Add faction…"]));
-    for (const f of available) addSelect.append(el("option", { value: f.id }, [f.name]));
-    addSelect.addEventListener("change", () => { if (addSelect.value) addFaction(addSelect.value); });
     factionPickerEl.append(chipRow);
-    if (available.length) factionPickerEl.append(addSelect);
+
+    const available = appData.factions.filter(f => !character.factionIds?.includes(f.id));
+    if (available.length) {
+      const sorted = [...available].sort((a, b) => a.name.localeCompare(b.name));
+      const cb = createCombobox({
+        items: sorted.map(f => ({ value: f.id, label: f.name })),
+        value: "",
+        placeholder: "Add faction…",
+        onChange: (fId) => { if (fId) addFaction(fId); },
+      });
+      factionPickerEl.append(cb);
+    }
   }
 
   function addFaction(fId) {
@@ -308,20 +329,64 @@ export function mountCharacterSheet(container, appData, id) {
   function renderRelationships() {
     clear(relsEl);
     const mine = (appData.relationships ?? []).filter(r => r.from === character.id);
+
+    // Sort: living first (alpha by name), deceased last (alpha by name).
+    mine.sort((a, b) => {
+      const aOther    = appData.characters.find(c => c.id === a.to);
+      const bOther    = appData.characters.find(c => c.id === b.to);
+      const aDeceased = aOther?.deceased ? 1 : 0;
+      const bDeceased = bOther?.deceased ? 1 : 0;
+      if (aDeceased !== bDeceased) return aDeceased - bDeceased;
+      return displayName(aOther ?? {}).localeCompare(displayName(bOther ?? {}));
+    });
+
     if (!mine.length) {
       relsEl.append(el("p", { class: "sheet-empty-note" }, ["No relationships yet."]));
       return;
     }
+
     for (const rel of mine) {
-      const other = appData.characters.find(c => c.id === rel.to);
-      relsEl.append(el("div", { class: "rel-row" }, [
-        el("a", { class: "rel-other-name", href: `#/characters/${rel.to}` }, [other ? displayName(other) : "Unknown"]),
-        el("span", { class: "rel-type" }, [` — ${rel.type} (${rel.closeness})`]),
-        el("button", { class: "btn-small", onclick: () => {
+      const other  = appData.characters.find(c => c.id === rel.to);
+      const frozen = !!other?.deceased;
+
+      // Type line: structural + social labels.
+      const typeParts = [];
+      if (rel.structuralType) typeParts.push(rel.structuralType);
+      if (rel.socialLabels?.length) typeParts.push(...rel.socialLabels);
+      const typeStr = typeParts.length ? ` — ${typeParts.join(", ")}` : "";
+
+      // Feeling line: platonic · romantic.
+      const feelParts = [rel.platonic, rel.romantic].filter(Boolean);
+      const feelStr   = feelParts.join(" · ");
+
+      const editBtn = el("button", { class: "btn-small" }, ["Edit"]);
+      if (frozen) {
+        editBtn.disabled = true;
+      } else {
+        editBtn.addEventListener("click", () => {
           openRelationshipDialog(appData, character.id, rel.id, renderRelationships);
-        }}, ["Edit"]),
-        el("button", { class: "btn-small btn-small--danger", onclick: () => removeRel(rel) }, ["×"]),
-      ]));
+        });
+      }
+
+      const deleteBtn = el("button", { class: "btn-small btn-small--danger" });
+      deleteBtn.addEventListener("click", () => removeRel(rel));
+      deleteBtn.textContent = "×";
+
+      const row = el("div", {
+        class: "rel-row" + (frozen ? " rel-row--frozen" : ""),
+        title: frozen ? "Frozen at this character's death." : "",
+      }, [
+        el("div", { class: "rel-row-main" }, [
+          el("a", { class: "rel-other-name", href: `#/characters/${rel.to}` },
+            [other ? displayName(other) : "Unknown"]),
+          el("span", { class: "rel-type" }, [typeStr]),
+          editBtn,
+          deleteBtn,
+        ]),
+        feelStr ? el("div", { class: "rel-row-feelings" }, [feelStr]) : null,
+      ].filter(Boolean));
+
+      relsEl.append(row);
     }
   }
 
@@ -362,7 +427,7 @@ export function mountCharacterSheet(container, appData, id) {
     el("div", { class: "sheet-layout" }, [
       el("div", { class: "sheet-main" }, [
         makeNameList(character, "previousNames", "Previous names", debouncedSave),
-        makeNameList(character, "aliases", "Aliases / codenames", debouncedSave),
+        makeNameList(character, "aliases", "Aliases / codenames", debouncedSave, { withPrimary: true }),
         identitySection,
         el("section", { class: "sheet-section" }, [
           el("h3", { class: "sheet-section-title" }, ["Summary"]),
@@ -379,6 +444,10 @@ export function mountCharacterSheet(container, appData, id) {
         el("section", { class: "sheet-section" }, [
           el("div", { class: "sheet-section-header" }, [
             el("h3", { class: "sheet-section-title" }, ["Relationships"]),
+            el("button", { class: "btn-small", onclick: async () => {
+              const { openRelationshipWeb } = await import("./relationship-web.js");
+              openRelationshipWeb(character.id, appData);
+            }}, ["Web"]),
             el("button", { class: "btn-small", onclick: () => {
               openRelationshipDialog(appData, character.id, null, renderRelationships);
             }}, ["+ Add"]),
