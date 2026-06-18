@@ -456,3 +456,9 @@
   min-width: 90px;
   width: auto !important;
 }
+
+.lang-new-row {
+  display: flex;
+  gap: 0.3rem;
+  width: 100%;
+}

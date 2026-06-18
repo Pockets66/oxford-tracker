@@ -593,16 +593,45 @@ function editLanguages(ch, appData, persistNow, done) {
       placeholder: "Select language…",
       onChange: (val) => {
         if (val === "__new__") {
-          const name = prompt("New language name:")?.trim();
-          if (!name) return;
-          appData.meta.knownLanguages ??= [];
-          if (!appData.meta.knownLanguages.includes(name)) {
-            appData.meta.knownLanguages.push(name);
-            appData.meta.knownLanguages.sort((a, b) => a.localeCompare(b));
-            save("meta", appData.meta);
+          clear(comboWrap);
+          const nameInput = el("input", {
+            type: "text",
+            class: "sheet-input",
+            placeholder: "Language name…",
+          });
+          nameInput.style.flex = "1";
+          nameInput.style.minWidth = "0";
+          const confirmBtn = el("button", { class: "btn-small" }, ["✓"]);
+          const cancelBtn  = el("button", { class: "btn-small" }, ["✗"]);
+
+          function commitNew() {
+            const name = nameInput.value.trim();
+            if (!name) { rebuildCombo(); return; }
+            appData.meta.knownLanguages ??= [];
+            if (!appData.meta.knownLanguages.includes(name)) {
+              appData.meta.knownLanguages.push(name);
+              appData.meta.knownLanguages.sort((a, b) => a.localeCompare(b));
+              save("meta", appData.meta);
+            }
+            if (!ch.languages.find(l => l.name === name)) {
+              ch.languages.push({ name, level: levelSel.value });
+              persistNow();
+              renderRows();
+            }
+            selectedLang = "";
+            rebuildCombo();
           }
-          selectedLang = name;
-          rebuildCombo();
+
+          nameInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") { e.preventDefault(); commitNew(); }
+            else if (e.key === "Escape") { rebuildCombo(); }
+          });
+          confirmBtn.addEventListener("click", commitNew);
+          cancelBtn.addEventListener("click", () => rebuildCombo());
+
+          const row = el("div", { class: "lang-new-row" }, [nameInput, confirmBtn, cancelBtn]);
+          comboWrap.append(row);
+          nameInput.focus();
         } else {
           selectedLang = val;
         }
