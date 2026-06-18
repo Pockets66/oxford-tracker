@@ -773,9 +773,12 @@ function makeButtonRow(ch, appData) {
     openRelationshipWeb(ch.id, appData);
   });
 
-  const facBtn = el("button", { class: "sheet-action-btn", "data-action": "faction-web", title: "Coming in Slice 9" });
-  facBtn.disabled = true;
+  const facBtn = el("button", { class: "sheet-action-btn", "data-action": "faction-web", title: "Faction Web" });
   facBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="3"/><circle cx="4" cy="6" r="1.5"/><circle cx="20" cy="6" r="1.5"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="18" r="1.5"/><line x1="10" y1="11" x2="5" y2="7"/><line x1="14" y1="11" x2="19" y2="7"/><line x1="10" y1="13" x2="5" y2="17"/><line x1="14" y1="13" x2="19" y2="17"/></svg><span>Factions</span>`;
+  facBtn.addEventListener("click", async () => {
+    const { openFactionWeb } = await import("./faction-web.js");
+    openFactionWeb(ch.id, appData);
+  });
 
   const tlBtn = el("button", { class: "sheet-action-btn", "data-action": "personal-timeline", title: "Coming in Slice 9" });
   tlBtn.disabled = true;
