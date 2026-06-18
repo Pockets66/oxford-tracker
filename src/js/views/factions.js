@@ -3,6 +3,7 @@ import { navigate } from "../router.js";
 import { save } from "../storage.js";
 import { createFaction, displayName } from "../schema.js";
 import { createFilterBar } from "../filters.js";
+import { mountFactionMap } from "./faction-map.js";
 
 function applyFilters(factions, { search }) {
   if (!search) return factions;
@@ -38,6 +39,10 @@ function renderFactionCard(faction, characters) {
 }
 
 export function mountFactions(container, appData) {
+  let currentView = "list";
+  let teardownMap = null;
+  let lastState   = { search: "", facetValues: {} };
+
   async function handleNew() {
     const faction = createFaction();
     appData.factions.push(faction);
@@ -51,24 +56,42 @@ export function mountFactions(container, appData) {
   });
 
   const grid = el("div", { class: "faction-grid" });
-  const initialState = { search: "", facetValues: {} };
 
-  function renderGrid(state) {
+  async function renderContent(state) {
+    lastState = state;
+    if (teardownMap) { teardownMap(); teardownMap = null; }
     clear(grid);
-    const visible = applyFilters(appData.factions, state);
-    if (!visible.length) {
-      grid.append(el("p", { class: "faction-empty" }, ["No factions match."]));
+    if (currentView === "list") {
+      const visible = applyFilters(appData.factions, state);
+      if (!visible.length) {
+        grid.append(el("p", { class: "faction-empty" }, ["No factions match."]));
+      } else {
+        for (const f of visible) grid.append(renderFactionCard(f, appData.characters));
+      }
     } else {
-      for (const f of visible) grid.append(renderFactionCard(f, appData.characters));
+      teardownMap = await mountFactionMap(grid, appData, { search: state.search });
     }
   }
 
-  filterBar.subscribe(state => renderGrid(state));
-  renderGrid(initialState);
+  const listBtn = el("button", { onclick: () => switchView("list") }, ["List"]);
+  const mapBtn  = el("button", { onclick: () => switchView("map") }, ["Map"]);
+  listBtn.classList.add("is-active");
+  const viewToggle = el("div", { class: "factions-view-toggle" }, [listBtn, mapBtn]);
+
+  function switchView(view) {
+    currentView = view;
+    listBtn.classList.toggle("is-active", view === "list");
+    mapBtn.classList.toggle("is-active", view === "map");
+    renderContent(lastState);
+  }
+
+  filterBar.subscribe(state => renderContent(state));
+  renderContent(lastState);
 
   container.append(
     el("div", { class: "factions-toolbar" }, [
       el("button", { class: "btn-primary", onclick: handleNew }, ["New faction"]),
+      viewToggle,
     ]),
     filterBar.node,
     grid

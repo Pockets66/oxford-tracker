@@ -52,6 +52,30 @@
   width: 100%;
 }
 
+/* ── 2-hop toggle ── */
+.rweb-hop-wrap {
+  align-items: center;
+  color: var(--text-muted);
+  display: flex;
+  font-family: Inter, system-ui, sans-serif;
+  font-size: 0.85rem;
+  gap: 0.4rem;
+  margin-right: 1rem;
+}
+.rweb-hop-wrap input[type="checkbox"] {
+  accent-color: var(--accent);
+  cursor: pointer;
+  height: 14px;
+  width: 14px;
+}
+.rweb-hop-toggle {
+  cursor: pointer;
+  user-select: none;
+}
+.rweb-hop-toggle:hover {
+  color: var(--text);
+}
+
 /* ── Edge feelings tooltip ── */
 .rweb-tooltip {
   background: var(--bg-raised);

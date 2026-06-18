@@ -3,6 +3,7 @@ import { navigate } from "../router.js";
 import { save } from "../storage.js";
 import { syncFactionMembership, displayName } from "../schema.js";
 import { createCombobox } from "../components/combobox.js";
+import { openFactionMapModal } from "./faction-map.js";
 
 function debounce(fn, delay) {
   let timer;
@@ -68,6 +69,7 @@ export function mountFactionPage(container, appData, id) {
     nameInput,
     el("div", { class: "sheet-header-controls" }, [
       el("label", { class: "faction-color-label" }, ["Color ", colorPicker]),
+      el("button", { class: "btn-small", onclick: () => openFactionMapModal(appData) }, ["Map"]),
       el("button", { class: "btn-danger", onclick: handleDelete }, ["Delete"]),
     ]),
   ]);

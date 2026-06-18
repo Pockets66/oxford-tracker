@@ -107,9 +107,19 @@ Per character relationship view rendered with Cytoscape. Center node is the char
 
 Notes: Cytoscape 3.34.0 vendored at `src/vendor/cytoscape.esm.min.js` (ESM .mjs build). Modal opened via "Web" button in the Relationships section header. Re-centering opens a new `openRelationshipWeb()` invocation and closes the old modal cleanly.
 
+## Slice 4.1: Relationship Web 2-hop toggle
+
+**Status: done** — 2026-06-18
+
+"2nd-degree connections" checkbox in the web modal topbar. Toggles between 1-hop (center's direct rels only) and 2-hop (adds edges among the connected characters). 2-hop edges render at 55% opacity / 1px width. Toggle state persists within a session (module-level variable). Re-centering on a node preserves the current toggle state.
+
 ## Slice 5: Faction Map
 
 Cytoscape graph view on the Factions tab showing every faction as a large node and every character as a small node connected to its factions. Multi faction characters naturally sit between their factions via the force layout. Click a character to go to their sheet. Click a faction to go to the faction page. Tune layout so labels do not overlap.
+
+**Status: done** — 2026-06-18
+
+List/Map toggle on the Factions overview (List default). Map lazy-loads Cytoscape via dynamic import. Factions are 80px colored nodes; characters are 28px owner-colored nodes connected by faction-colored edges. Deceased nodes dim to 45% opacity. Search filters both views. `knowsSupernatural: false` added to new characters (no migration; data import handles existing characters). `ownerColor` extracted to `src/js/util/owner-color.js` and shared with relationship web.
 
 ## Slice 6: Scenes CRUD
 
