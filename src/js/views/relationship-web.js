@@ -7,11 +7,13 @@ import { ownerColor } from "../util/owner-color.js";
 let showTwoHop = false;
 
 function edgeLabel(rel) {
-  return rel.structuralType || rel.socialLabels?.[0] || "";
+  return rel.band || "";
 }
 
 function feelingsString(rel) {
-  return [rel.platonic, rel.romantic].filter(Boolean).join(" · ");
+  const links = (rel.links ?? []).join(", ");
+  if (links && rel.notes) return `${links} · ${rel.notes}`;
+  return links || rel.notes || rel.band || "";
 }
 
 // Returns { charIds: Set, relsToRender: Relationship[] }

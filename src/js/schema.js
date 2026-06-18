@@ -48,45 +48,37 @@ export function createSecret() {
 
 // ── Relationship constants ────────────────────────────────────────────────────
 
-export const STRUCTURAL_TYPES = [
-  "Parent", "Child", "Sibling",
-  "Spouse", "Ex-spouse", "Fiancé(e)",
-  "Lover", "Ex-lover",
-  "Mentor", "Student",
-  "Other family",
+// Ordered worst → best. Index = spectrum position.
+export const RELATIONSHIP_BANDS = [
+  "Nemesis", "Bad Blood", "Cold", "Neutral", "Friendly", "Close", "Inseparable",
 ];
 
-export const STRUCTURAL_PAIRS = {
-  "Parent":      "Child",
-  "Child":       "Parent",
-  "Sibling":     "Sibling",
-  "Spouse":      "Spouse",
-  "Ex-spouse":   "Ex-spouse",
-  "Fiancé(e)":   "Fiancé(e)",
-  "Lover":       "Lover",
-  "Ex-lover":    "Ex-lover",
-  "Mentor":      "Student",
-  "Student":     "Mentor",
-  "Other family": "Other family",
+export const RELATIONSHIP_LINKS = {
+  Family:     ["Parent", "Child", "Sibling", "Spouse", "ExSpouse", "Family"],
+  Romantic:   ["Crush", "Dating", "Fiancé(e)", "SignificantOther", "Lover", "FormerLover", "ExPartner"],
+  Friendship: ["BestFriend", "Friend", "Acquaintance"],
+  Work:       ["Colleague", "ExColleague", "Boss", "Subordinate", "Mentor", "Protégé", "Client", "Patron", "Dependent"],
+  Education:  ["Professor", "Student", "Classmate", "Alumnus"],
+  Rivalry:    ["Rival", "Adversary"],
+  Living:     ["Roommate"],
 };
 
-export const SOCIAL_LABELS = [
-  "Best friend", "Friend", "Rival", "Enemy", "Nemesis",
-  "Acquaintance", "Colleague", "Classmate", "Roommate",
-  "Crush", "Other",
-];
+export const RELATIONSHIP_LINKS_FLAT = Object.values(RELATIONSHIP_LINKS).flat();
 
-export const PLATONIC_FEELINGS = [
-  "Despises", "Dislikes", "Distrusts",
-  "Estranged", "Distant", "Tolerates",
-  "Acquaintance", "Likes", "Trusts",
-  "Cares for", "Inseparable",
-];
-
-export const ROMANTIC_FEELINGS = [
-  "Complicated", "Awkward", "Crush",
-  "Dating", "Sweethearts", "In Love",
-];
+export function createRelationship() {
+  const now = new Date().toISOString();
+  return {
+    id:              crypto.randomUUID(),
+    from:            "",
+    to:              "",
+    band:            "Neutral",
+    links:           [],
+    notes:           "",
+    lastChangedDate: null,
+    createdAt:       now,
+    updatedAt:       now,
+  };
+}
 
 // ── Factories ────────────────────────────────────────────────────────────────
 
@@ -267,39 +259,10 @@ export function migrateNamesToV3(characters) {
   }
 }
 
-// Migration v3→v4: add displayAliasIndex to characters; migrate relationships
-// from {type, closeness} to {structuralType, socialLabels, platonic, romantic}.
-export function migrateToV4(characters, relationships) {
+// Migration v3→v4: add displayAliasIndex to characters.
+export function migrateToV4(characters, _relationships) {
   for (const c of characters) {
     if (!("displayAliasIndex" in c)) c.displayAliasIndex = null;
     if (!("deathDate" in c))         c.deathDate = null;
-  }
-  migrateRelationships(relationships);
-}
-
-export function migrateRelationships(relationships) {
-  const closeToPlat = {
-    "Inseparable": "Inseparable",
-    "Close":       "Cares for",
-    "Familiar":    "Likes",
-    "Acquaintance": "Acquaintance",
-    "Distant":     "Distant",
-    "Estranged":   "Estranged",
-  };
-  const romanticStructural = new Set(["Lover", "Ex-lover", "Spouse", "Ex-spouse", "Fiancé(e)"]);
-
-  for (const r of relationships) {
-    if ("structuralType" in r) continue;
-    const oldType     = r.type      ?? "";
-    const oldCloseness = r.closeness ?? "";
-
-    r.structuralType = STRUCTURAL_TYPES.includes(oldType) ? oldType : null;
-    r.socialLabels   = SOCIAL_LABELS.includes(oldType) ? [oldType] : [];
-    r.platonic       = closeToPlat[oldCloseness] ?? null;
-    r.romantic       = (oldCloseness === "Inseparable" && romanticStructural.has(oldType))
-      ? "In Love" : null;
-
-    delete r.type;
-    delete r.closeness;
   }
 }

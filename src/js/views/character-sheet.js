@@ -1,9 +1,8 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS } from "../schema.js";
+import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS, RELATIONSHIP_BANDS } from "../schema.js";
 import { sunSignFromDate } from "../zodiac.js";
-import { openRelationshipDialog } from "./relationship-dialog.js";
 import { createCombobox } from "../components/combobox.js";
 import { formatLongDate } from "../dates.js";
 
@@ -237,6 +236,16 @@ function buildRelsEl(ch, appData, onRelsChange) {
   return relsEl;
 }
 
+const BAND_COLOR = {
+  "Nemesis":     "var(--danger)",
+  "Bad Blood":   "var(--danger)",
+  "Cold":        "var(--text-muted)",
+  "Neutral":     "var(--text-muted)",
+  "Friendly":    "var(--success, #3d7a4a)",
+  "Close":       "var(--success, #3d7a4a)",
+  "Inseparable": "var(--gold)",
+};
+
 function refreshRelsEl(relsEl, ch, appData, onRelsChange) {
   clear(relsEl);
   const mine = (appData.relationships ?? []).filter(r => r.from === ch.id);
@@ -247,6 +256,10 @@ function refreshRelsEl(relsEl, ch, appData, onRelsChange) {
     const ad = ao?.deceased ? 1 : 0;
     const bd = bo?.deceased ? 1 : 0;
     if (ad !== bd) return ad - bd;
+    // Band descending (Inseparable=6 first)
+    const ai = RELATIONSHIP_BANDS.indexOf(a.band ?? "Neutral");
+    const bi = RELATIONSHIP_BANDS.indexOf(b.band ?? "Neutral");
+    if (bi !== ai) return bi - ai;
     return displayName(ao ?? {}).localeCompare(displayName(bo ?? {}));
   });
 
@@ -258,37 +271,22 @@ function refreshRelsEl(relsEl, ch, appData, onRelsChange) {
   for (const rel of mine) {
     const other  = appData.characters.find(c => c.id === rel.to);
     const frozen = !!other?.deceased;
+    const band   = rel.band ?? "Neutral";
+    const links  = (rel.links ?? []).join(", ");
 
-    const typeParts = [];
-    if (rel.structuralType) typeParts.push(rel.structuralType);
-    if (rel.socialLabels?.length) typeParts.push(...rel.socialLabels);
-    const typeStr = typeParts.length ? ` — ${typeParts.join(", ")}` : "";
-
-    const feelParts = [rel.platonic, rel.romantic].filter(Boolean);
-    const feelStr   = feelParts.join(" · ");
-
-    const editBtn = el("button", { class: "btn-small" }, ["Edit"]);
-    editBtn.addEventListener("click", () => {
-      openRelationshipDialog(appData, ch.id, rel.id, () => {
-        refreshRelsEl(relsEl, ch, appData, onRelsChange);
-      });
-    });
-
-    const delBtn = el("button", { class: "btn-small btn-small--danger" }, ["×"]);
-    delBtn.addEventListener("click", () => removeRel(rel, ch, appData, relsEl, onRelsChange));
+    const mainLine = el("div", { class: "rel-row-main" }, [
+      el("a", { class: "rel-other-name", href: `#/characters/${rel.to}` },
+        [other ? displayName(other) : "Unknown"]),
+      links ? el("span", { class: "rel-type" }, [` — ${links} · `]) : el("span", { class: "rel-type" }, [" · "]),
+      el("em", { class: "rel-band", style: `color: ${BAND_COLOR[band] ?? "var(--text-muted)"}` }, [band]),
+    ]);
 
     const row = el("div", {
       class: "rel-row" + (frozen ? " rel-row--frozen" : ""),
       title: frozen ? "This character is deceased." : "",
     }, [
-      el("div", { class: "rel-row-main" }, [
-        el("a", { class: "rel-other-name", href: `#/characters/${rel.to}` },
-          [other ? displayName(other) : "Unknown"]),
-        el("span", { class: "rel-type" }, [typeStr]),
-        editBtn,
-        delBtn,
-      ]),
-      feelStr ? el("div", { class: "rel-row-feelings" }, [feelStr]) : null,
+      mainLine,
+      rel.notes ? el("div", { class: "rel-row-feelings" }, [rel.notes]) : null,
     ].filter(Boolean));
 
     relsEl.append(row);
@@ -329,9 +327,7 @@ function renderFactionsRelsRO(ch, appData, onRelsChange) {
 
   parts.push(el("div", { class: "sc-rels-header" }, [
     el("span", { class: "sc-sublabel" }, ["Relationships"]),
-    el("button", { class: "btn-small", onclick: () => {
-      openRelationshipDialog(appData, ch.id, null, onRelsChange);
-    }}, ["+ Add"]),
+    el("button", { class: "btn-small", onclick: () => {} }, ["+ Add"]),
   ]));
 
   parts.push(buildRelsEl(ch, appData, onRelsChange));
@@ -754,9 +750,7 @@ function editFactionsRels(ch, appData, persistMembership, done) {
     comboWrap,
     el("div", { class: "sc-rels-header" }, [
       el("span", { class: "sc-sublabel" }, ["Relationships"]),
-      el("button", { class: "btn-small", onclick: () => {
-        openRelationshipDialog(appData, ch.id, null, refreshRels);
-      }}, ["+ Add"]),
+      el("button", { class: "btn-small", onclick: () => {} }, ["+ Add"]),
     ]),
     relsEl,
     makeDoneBtn(done),
