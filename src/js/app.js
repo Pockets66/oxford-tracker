@@ -159,9 +159,10 @@ async function init() {
     }
 
     appData.meta.knownLanguages ??= [];
-    appData.secrets   ??= [];
-    appData.scenes    ??= [];
-    appData.plotlines ??= [];
+    appData.secrets        ??= [];
+    appData.scenes         ??= [];
+    appData.plotlines      ??= [];
+    appData.timelineEvents ??= [];
 
     const writes = [];
     if (needCharSave) writes.push(save("characters", appData.characters));

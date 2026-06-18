@@ -223,15 +223,28 @@ Followups:
 - Faction Web and Personal Timeline buttons on the sheet are disabled, wired in Slice 9.
 - Current card is read-only derived data; no per-card edit needed.
 
-## Slice 9: Cross linking pass
+## Slice 9: Personal character timeline + Faction Web modal
 
-Audit every entity view. Every character name, faction name, scene title, plotline title, and anomaly title appearing anywhere in the app must be a clickable link to that entity's page. Add a global search box in the header. Add breadcrumb or back navigation.
+**Status: done** — 2026-06-18
 
-## Slice 10: Anomalies tab
+Checkpoints:
+- CP1: Faction Web button wired — Cytoscape modal showing the character's factions and their members. Viewing character highlighted with gold border. Click faction → navigate faction page; click other character → navigate their sheet. Empty state if no factions. Done.
+- CP2: Personal Timeline button wired — vis-timeline modal showing birth, death, life events (from new `timelineEvents` entity), and dated scene appearances. Events list grouped by year below the timeline. Add/edit/delete events via timeline-event-dialog. Current-date "now" marker. `timelineEvents.json` seeded. `dates.js` extended to handle year-only ("YYYY") dates. Done.
+
+Followups:
+- Scene appearances in the timeline navigate on click but close the modal first (no back navigation to the timeline).
+- Timeline does not yet show faction events (factionIds on TimelineEvent not yet surfaced in the UI).
+- "Other characters involved" multi-picker in the event dialog deferred — current character is auto-included, additional characterIds must be added via direct JSON editing until Slice 10 adds a global events view.
+
+## Slice 10: Global timeline
+
+Plotlines tab addition or standalone Anomalies-level tab showing all timeline events and scene dates on a single vis-timeline. Events can be filtered by character or faction.
+
+## Slice 11: Anomalies tab
 
 Foley's Book of Anomalies. Overview cards plus per anomaly page. Fields: name, Primary P with level, Secondary Ps with levels (multiple), lore, related characters, related scenes. Sub-tabs across the top organized by P. Schema lets us add more Ps later without code changes.
 
-## Slice 11: Export, import, polish, search
+## Slice 12: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.
 

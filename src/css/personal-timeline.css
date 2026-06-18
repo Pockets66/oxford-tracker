@@ -1,0 +1,143 @@
+/* ── Personal Timeline modal ── */
+.ptl-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--gold);
+  display: flex;
+  flex-direction: column;
+  height: 90vh;
+  width: 90vw;
+}
+
+.ptl-body {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.ptl-canvas {
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  min-height: 260px;
+}
+
+.ptl-events-section {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem;
+}
+
+/* ── Year groups ── */
+.ptl-year-group {
+  margin-bottom: 1.25rem;
+}
+
+.ptl-year-label {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+}
+
+.ptl-event-row {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.4rem 0;
+}
+
+.ptl-event-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+}
+
+.ptl-event-title {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ptl-event-date {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
+}
+
+.ptl-event-btns {
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.3rem;
+}
+
+.ptl-add-row {
+  padding: 0.5rem 0;
+}
+
+.ptl-add-btn {
+  color: var(--accent);
+}
+
+/* ── vis-timeline item overrides ── */
+.ptl-birth.vis-item {
+  background-color: var(--success, #3d7a4a);
+  border-color: var(--success, #3d7a4a);
+  color: #fff;
+}
+
+.ptl-death.vis-item {
+  background-color: var(--text-muted);
+  border-color: var(--text-muted);
+  color: var(--bg);
+}
+
+.ptl-event-item.vis-item {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.ptl-scene-item.vis-item {
+  color: #fff;
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+/* ── Date dialog helpers ── */
+.ptl-precision-sel {
+  max-width: 120px;
+}
+
+.ptl-year-input {
+  max-width: 100px;
+}
+
+.ptl-date-fields {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.ptl-body-textarea {
+  min-height: 4rem;
+  resize: vertical;
+  width: 100%;
+}
+
+.ptl-error {
+  color: var(--danger);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  margin: 1rem;
+}

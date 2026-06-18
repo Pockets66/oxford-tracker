@@ -780,9 +780,12 @@ function makeButtonRow(ch, appData) {
     openFactionWeb(ch.id, appData);
   });
 
-  const tlBtn = el("button", { class: "sheet-action-btn", "data-action": "personal-timeline", title: "Coming in Slice 9" });
-  tlBtn.disabled = true;
+  const tlBtn = el("button", { class: "sheet-action-btn", "data-action": "personal-timeline", title: "Personal Timeline" });
   tlBtn.innerHTML = `<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><line x1="3" y1="12" x2="21" y2="12"/><circle cx="7" cy="12" r="1.5" fill="currentColor"/><circle cx="12" cy="12" r="1.5" fill="currentColor"/><circle cx="17" cy="12" r="1.5" fill="currentColor"/></svg><span>Timeline</span>`;
+  tlBtn.addEventListener("click", async () => {
+    const { openPersonalTimeline } = await import("./personal-timeline.js");
+    openPersonalTimeline(ch.id, appData);
+  });
 
   return el("div", { class: "sheet-button-row" }, [relBtn, facBtn, tlBtn]);
 }

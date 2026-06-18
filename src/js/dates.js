@@ -34,6 +34,7 @@ export function parseFlexibleDate(s) {
   const parts = s.split("-").map(Number);
   if (parts.length === 3) return { year: parts[0], month: parts[1], day: parts[2] };
   if (parts.length === 2) return { year: parts[0], month: parts[1], day: null };
+  if (parts.length === 1 && parts[0]) return { year: parts[0], month: null, day: null };
   return null;
 }
 
@@ -41,13 +42,14 @@ export function formatFlexibleDate(s) {
   const p = parseFlexibleDate(s);
   if (!p) return "";
   if (p.day) return `${p.day} ${MONTHS[p.month - 1]} ${p.year}`;
-  return `${MONTHS[p.month - 1]} ${p.year}`;
+  if (p.month) return `${MONTHS[p.month - 1]} ${p.year}`;
+  return `${p.year}`;
 }
 
 export function flexibleDateSortKey(s) {
   const p = parseFlexibleDate(s);
   if (!p) return "";
-  const m = String(p.month).padStart(2, "0");
+  const m = String(p.month ?? 1).padStart(2, "0");
   const d = String(p.day ?? 1).padStart(2, "0");
   return `${p.year}-${m}-${d}`;
 }

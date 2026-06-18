@@ -211,6 +211,22 @@ export function createPlotline() {
   };
 }
 
+export function createTimelineEvent() {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    body: "",
+    date: null,
+    characterIds: [],
+    factionIds: [],
+    plotlineIds: [],
+    kind: "event",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 // ── Migrations ───────────────────────────────────────────────────────────────
 
 // Migration v1→v2: old `sheet` shape → new `background` + `cards` shape.
