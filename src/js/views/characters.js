@@ -41,7 +41,6 @@ const DEFAULT_STATE = {
   owner:        [...ALL_OWNERS],
   faction:      [],
   language:     [],
-  supernatural: null,
   showDeceased: true,
   secret:       [],
 };
@@ -56,7 +55,6 @@ function loadFilterState() {
         owner:        Array.isArray(s.owner)    ? s.owner    : [...ALL_OWNERS],
         faction:      Array.isArray(s.faction)  ? s.faction  : [],
         language:     Array.isArray(s.language) ? s.language : [],
-        supernatural: s.supernatural !== undefined ? s.supernatural : null,
         showDeceased: s.showDeceased !== undefined ? s.showDeceased : true,
         secret:       Array.isArray(s.secret)   ? s.secret   : [],
       };
@@ -75,7 +73,6 @@ function isFilterModified(state) {
     state.owner.length < ALL_OWNERS.length ||
     state.faction.length ||
     state.language.length ||
-    state.supernatural !== null ||
     !state.showDeceased ||
     state.secret.length
   );
@@ -113,10 +110,6 @@ function applyFilters(characters, state, secrets) {
         (c.languages ?? []).some(l => l.name.toLowerCase() === lang.toLowerCase())
       )
     );
-  }
-
-  if (state.supernatural !== null) {
-    result = result.filter(c => !!c.knowsSupernatural === state.supernatural);
   }
 
   if (!state.showDeceased) {
@@ -347,24 +340,6 @@ export function mountCharacters(container, appData) {
   });
   renderSecretChips();
 
-  // ── Supernatural 3-state cycle ──
-  const SUP_STATES = [null, true, false];
-  const SUP_LABELS = ["All", "Knows ✓", "Doesn't know"];
-  let supIdx = Math.max(0, SUP_STATES.indexOf(filterState.supernatural));
-  const supBtn = el("button", { class: "filter-3state-btn" });
-
-  function updateSupBtn() {
-    supBtn.textContent = `Supernatural: ${SUP_LABELS[supIdx]}`;
-    supBtn.classList.toggle("is-active", supIdx !== 0);
-  }
-  updateSupBtn();
-  supBtn.addEventListener("click", () => {
-    supIdx = (supIdx + 1) % SUP_STATES.length;
-    filterState.supernatural = SUP_STATES[supIdx];
-    updateSupBtn();
-    onChange();
-  });
-
   // ── Deceased toggle ──
   const deceasedCheck = el("input", { type: "checkbox", id: "filter-show-deceased" });
   deceasedCheck.checked = filterState.showDeceased;
@@ -387,10 +362,6 @@ export function mountCharacters(container, appData) {
     el("div", { class: "filter-popover-row" }, [
       el("span", { class: "filter-popover-label" }, ["Knows secret"]),
       el("div", { class: "filter-faction-wrap" }, [secretSelect, secretChipsEl]),
-    ]),
-    el("div", { class: "filter-popover-row" }, [
-      el("span", { class: "filter-popover-label" }, ["Supernatural"]),
-      supBtn,
     ]),
     el("div", { class: "filter-popover-row" }, [
       el("label", { class: "filter-toggle", for: "filter-show-deceased" }, [deceasedCheck, "Show deceased"]),
@@ -417,8 +388,6 @@ export function mountCharacters(container, appData) {
     renderFactionChips();
     renderLangChips();
     renderSecretChips();
-    supIdx = 0;
-    updateSupBtn();
     deceasedCheck.checked = true;
     try { localStorage.removeItem(PERSIST_KEY); } catch {}
     clearBtn.style.display = "none";

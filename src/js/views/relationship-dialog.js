@@ -14,6 +14,10 @@ function fieldRow(labelText, control) {
   ]);
 }
 
+function sectionRule(title) {
+  return el("div", { class: "dialog-section-rule" }, [title]);
+}
+
 function makeStructuralSelect(selected) {
   const sel = el("select", { class: "dialog-select" });
   sel.append(el("option", { value: "" }, ["— None —"]));
@@ -114,6 +118,20 @@ export function openRelationshipDialog(appData, fromId, existingId, onDone) {
     const notesTa     = el("textarea", { class: "dialog-notes" });
     const errEl       = el("p", { class: "dialog-error" });
 
+    // ── Reciprocal section ──
+    const recipPlatonicSel = makeFeelingSelect(PLATONIC_FEELINGS, null);
+    const recipRomanticSel = makeFeelingSelect(ROMANTIC_FEELINGS, null);
+    const recipExtra = el("div", { class: "dialog-recip-extra" }, [
+      fieldRow("Their platonic feeling", recipPlatonicSel),
+      fieldRow("Their romantic feeling", recipRomanticSel),
+    ]);
+    recipExtra.hidden = true;
+
+    const differentCheck = el("input", { type: "checkbox", id: "recip-different" });
+    differentCheck.addEventListener("change", () => {
+      recipExtra.hidden = !differentCheck.checked;
+    });
+
     buildBox(
       `Relationship — ${fromChar ? displayName(fromChar) : "?"}`,
       [
@@ -124,6 +142,11 @@ export function openRelationshipDialog(appData, fromId, existingId, onDone) {
         fieldRow("Romantic feeling", romanticSel),
         fieldRow("Notes (optional)", notesTa),
         errEl,
+        sectionRule("Their perspective"),
+        el("label", { class: "dialog-label-inline dialog-recip-toggle" }, [
+          differentCheck, " They feel differently",
+        ]),
+        recipExtra,
       ],
       [
         el("button", { class: "btn-primary", onclick: () => {
@@ -143,15 +166,18 @@ export function openRelationshipDialog(appData, fromId, existingId, onDone) {
           };
           appData.relationships.push(edge);
 
-          // Auto-create reciprocal if structural type is set.
-          if (structType && STRUCTURAL_PAIRS[structType]) {
+          // Create reciprocal unless one already exists.
+          const alreadyHasRecip = appData.relationships.some(
+            r => r.from === toId && r.to === fromId && r.id !== edge.id
+          );
+          if (!alreadyHasRecip) {
             appData.relationships.push({
               id: crypto.randomUUID(),
               from: toId, to: fromId,
-              structuralType: STRUCTURAL_PAIRS[structType],
+              structuralType: structType ? (STRUCTURAL_PAIRS[structType] ?? null) : null,
               socialLabels:   [],
-              platonic:       null,
-              romantic:       null,
+              platonic:       differentCheck.checked ? (recipPlatonicSel.value || null) : (platonicSel.value || null),
+              romantic:       differentCheck.checked ? (recipRomanticSel.value || null) : (romanticSel.value || null),
               notes:          "",
               createdAt: now, updatedAt: now,
             });
@@ -170,6 +196,7 @@ export function openRelationshipDialog(appData, fromId, existingId, onDone) {
     if (!rel) { close(); return; }
     const fromChar = appData.characters.find(c => c.id === fromId);
     const toChar   = appData.characters.find(c => c.id === rel.to);
+    const recip    = findRecip(appData.relationships, rel);
 
     const oldStructuralType = rel.structuralType;
 
@@ -180,14 +207,22 @@ export function openRelationshipDialog(appData, fromId, existingId, onDone) {
     const notesTa     = el("textarea", { class: "dialog-notes" });
     notesTa.value     = rel.notes ?? "";
 
+    // ── Reciprocal feelings (if reciprocal exists) ──
+    const toName = toChar ? displayName(toChar) : "them";
+    const recipPlatonicSel = recip ? makeFeelingSelect(PLATONIC_FEELINGS, recip.platonic) : null;
+    const recipRomanticSel = recip ? makeFeelingSelect(ROMANTIC_FEELINGS, recip.romantic) : null;
+
     buildBox(
-      `${fromChar ? displayName(fromChar) : "?"} → ${toChar ? displayName(toChar) : "?"}`,
+      `${fromChar ? displayName(fromChar) : "?"} → ${toName}`,
       [
         fieldRow("Structural type", structSel),
         fieldRow("Social labels", socialEl),
         fieldRow("Platonic feeling", platonicSel),
         fieldRow("Romantic feeling", romanticSel),
         fieldRow("Notes", notesTa),
+        recip ? sectionRule(`${toName}'s perspective`) : null,
+        recip ? fieldRow("Their platonic feeling", recipPlatonicSel) : null,
+        recip ? fieldRow("Their romantic feeling", recipRomanticSel) : null,
       ],
       [
         el("button", { class: "btn-primary", onclick: () => {
@@ -201,13 +236,14 @@ export function openRelationshipDialog(appData, fromId, existingId, onDone) {
           rel.notes          = notesTa.value.trim();
           rel.updatedAt      = now;
 
-          // If structural type changed, update the reciprocal's structural type.
-          if (newStructType !== oldStructuralType) {
-            const recip = findRecip(appData.relationships, rel);
-            if (recip) {
+          if (recip) {
+            // Update reciprocal structural type if it changed.
+            if (newStructType !== oldStructuralType) {
               recip.structuralType = newStructType ? (STRUCTURAL_PAIRS[newStructType] ?? null) : null;
-              recip.updatedAt = now;
             }
+            recip.platonic  = recipPlatonicSel.value || null;
+            recip.romantic  = recipRomanticSel.value || null;
+            recip.updatedAt = now;
           }
 
           save("relationships", appData.relationships);

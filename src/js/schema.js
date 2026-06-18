@@ -109,7 +109,6 @@ export function createCharacter() {
     zodiac: { sun: null, moon: null, rising: null },
     owner: "NPC",
     deceased: false,
-    knowsSupernatural: false,
     factionIds: [],
     summary: "",
     background: "",

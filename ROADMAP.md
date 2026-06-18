@@ -166,6 +166,20 @@ Followups:
 - Character sheet secrets cards are static on mount; adding a secret while the sheet is open won't reflect until re-navigation.
 - Secret counts on the overview card may drift if secrets are edited and the overview isn't re-mounted.
 
+## Slice 6.5: Printed character sheet view
+
+`knowsSupernatural` removed from schema, character sheet editor, and characters filter sidebar. Character pages now show a typeset read-only printed view by default. Edit pencil button (top right) opens a modal containing the existing editor. Closing the modal re-renders the printed view with the latest data.
+
+Printed view renders only filled fields: name, a.k.a., owner, deceased note, identity (age + birthday + place of birth), astrology (sun + moon/rising), factions (colored chips, linked), summary, background, languages, skills, secrets known, hidden from me, relationships (linked names + feelings), notes. Empty sections vanish entirely. A gold `❦` flourish divides the name from the body. Section rules are centered small-caps titles with gold hairlines.
+
+Modal reuses the app's gold-border, 90×90vw pattern. Deleting a character inside the modal navigates back to the characters list and removes the modal.
+
+**Status: done** — 2026-06-18
+
+Followups:
+- Printed view is static on open; editing inside the modal and closing re-renders the whole printed view. Fast enough but not reactive.
+- `printed-background` text uses `white-space: pre-wrap` which preserves newlines but is not a rich-text editor.
+
 ## Slice 7: Scenes CRUD
 
 Scenes tab with card preview grid and per scene page. Fields: title, summary, body, status (draft, in progress, complete), **story beats** (what needs to happen, free text or list), **goals** (what we want out of this scene), attached plotlines (chosen later), characters with role per character (Key Actor, Observer, Background). Character add control uses a smart dropdown: if the scene has a faction attached, prioritize that faction's members. Otherwise prioritize characters who already know other characters in the scene (via the relationships graph).

@@ -5,6 +5,7 @@ import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS } from 
 import { sunSignFromDate } from "../zodiac.js";
 import { openRelationshipDialog } from "./relationship-dialog.js";
 import { createCombobox } from "../components/combobox.js";
+import { formatLongDate } from "../dates.js";
 
 const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
 const SIGNS  = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -112,13 +113,152 @@ function makeNameList(ch, key, label, onSave, opts = {}) {
   ]);
 }
 
-export function mountCharacterSheet(container, appData, id) {
-  const character = appData.characters.find(c => c.id === id);
-  if (!character) {
-    container.append(el("p", { class: "placeholder-view" }, ["Character not found."]));
-    return;
+// ── Printed view ─────────────────────────────────────────────────────────────
+
+function renderPrintedSheet(container, character, appData, onEdit) {
+  const name = displayName(character);
+  const akas = (character.akaAliasIndices ?? [])
+    .map(i => character.aliases?.[i]).filter(Boolean);
+
+  const computedAge  = computeAge(character, appData.meta?.currentDate);
+  const displayAge   = computedAge ?? character.age;
+  const birthdayStr  = character.birthday ? formatLongDate(character.birthday) : null;
+  const deathStr     = character.deathDate ? formatLongDate(character.deathDate) : null;
+
+  const sun    = character.zodiac?.sun;
+  const moon   = character.zodiac?.moon;
+  const rising = character.zodiac?.rising;
+  const moonRisingParts = [
+    moon   ? `Moon in ${moon}`  : null,
+    rising ? `Rising ${rising}` : null,
+  ].filter(Boolean);
+
+  const factions    = (character.factionIds ?? []).map(fId => appData.factions.find(f => f.id === fId)).filter(Boolean);
+  const langs       = character.languages ?? [];
+  const rels        = (appData.relationships ?? []).filter(r => r.from === character.id);
+  const secretsKnown = (appData.secrets ?? []).filter(s => !s.archived && (s.knownToIds ?? []).includes(character.id));
+  const hiddenFrom  = (appData.secrets ?? []).filter(s => !s.archived && (s.hiddenFromIds ?? []).includes(character.id));
+
+  function psection(title, ...nodes) {
+    const kids = nodes.filter(Boolean);
+    if (!kids.length) return null;
+    return el("section", { class: "printed-section" }, [
+      el("div", { class: "printed-rule" }, [el("span", { class: "printed-rule-title" }, [title])]),
+      ...kids,
+    ]);
   }
 
+  const editBtn = el("button", { class: "sheet-edit-btn", title: "Edit" });
+  editBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`;
+  editBtn.addEventListener("click", onEdit);
+
+  // Identity section
+  const ageBornParts = [];
+  if (displayAge !== null && displayAge !== undefined) ageBornParts.push(`Age ${displayAge}`);
+  if (birthdayStr) ageBornParts.push(`Born ${birthdayStr}`);
+
+  // Relationship rows
+  const relsSorted = [...rels].sort((a, b) => {
+    const ao = appData.characters.find(c => c.id === a.to);
+    const bo = appData.characters.find(c => c.id === b.to);
+    if ((ao?.deceased ? 1 : 0) !== (bo?.deceased ? 1 : 0)) return (ao?.deceased ? 1 : 0) - (bo?.deceased ? 1 : 0);
+    return displayName(ao ?? {}).localeCompare(displayName(bo ?? {}));
+  });
+
+  const relRows = relsSorted.map(rel => {
+    const other = appData.characters.find(c => c.id === rel.to);
+    const typeParts = [];
+    if (rel.structuralType) typeParts.push(rel.structuralType);
+    if (rel.socialLabels?.length) typeParts.push(...rel.socialLabels);
+    const typeStr  = typeParts.join(", ");
+    const feelStr  = [rel.platonic, rel.romantic].filter(Boolean).join(" · ");
+    return el("div", { class: "printed-rel-row" + (other?.deceased ? " printed-rel-row--deceased" : "") }, [
+      el("div", { class: "printed-rel-main" }, [
+        el("a", { href: `#/characters/${rel.to}`, class: "printed-rel-name" },
+          [other ? displayName(other) : "Unknown"]),
+        typeStr ? el("span", { class: "printed-rel-type" }, [` — ${typeStr}`]) : null,
+      ]),
+      feelStr ? el("div", { class: "printed-rel-feelings" }, [feelStr]) : null,
+    ]);
+  });
+
+  const sheet = el("div", { class: "printed-sheet" }, [
+    el("div", { class: "printed-sheet-topbar" }, [
+      el("a", { class: "sheet-back", href: "#/characters" }, ["← Characters"]),
+      editBtn,
+    ]),
+
+    el("div", { class: "printed-header" }, [
+      el("h1", { class: "printed-name" }, [name]),
+      akas.length ? el("p", { class: "printed-aka" }, [`a.k.a. ${akas.join(", ")}`]) : null,
+      el("div", { class: "printed-flourish" }, ["❦"]),
+    ]),
+
+    el("p", { class: "printed-owner-line" }, [
+      character.owner && character.owner !== "NPC" ? `${character.owner}'s character` : "NPC",
+    ]),
+    character.deceased
+      ? el("p", { class: "printed-deceased-line" }, [
+          deathStr ? `Deceased — died ${deathStr}` : "Deceased",
+        ])
+      : null,
+
+    psection("Identity",
+      ageBornParts.length ? el("p", { class: "printed-identity-line" }, [ageBornParts.join(" · ")]) : null,
+      character.placeOfBirth ? el("p", { class: "printed-place" }, [character.placeOfBirth]) : null,
+    ),
+
+    psection("Astrology",
+      sun ? el("p", { class: "printed-astro-sun" }, [sun]) : null,
+      moonRisingParts.length ? el("p", { class: "printed-astro-extra" }, [moonRisingParts.join(" · ")]) : null,
+    ),
+
+    factions.length ? psection("Factions",
+      el("div", { class: "printed-faction-chips" }, factions.map(f => {
+        const chip = el("a", { class: "faction-chip faction-chip--link", href: `#/factions/${f.id}` }, [f.name]);
+        if (f.color) { chip.style.background = f.color; chip.style.color = chipTextColor(f.color); }
+        return chip;
+      }))
+    ) : null,
+
+    character.summary    ? el("p",   { class: "printed-summary" },    [character.summary])    : null,
+    character.background ? el("div", { class: "printed-background" }, [character.background]) : null,
+
+    langs.length ? psection("Languages",
+      el("p", { class: "printed-text" }, [langs.map(l => `${l.name} (${l.level})`).join(" · ")])
+    ) : null,
+
+    character.cards?.skills ? psection("Skills",
+      el("div", { class: "printed-card-text" }, [character.cards.skills])
+    ) : null,
+
+    secretsKnown.length ? psection("Secrets known",
+      el("ul", { class: "printed-secret-list" }, secretsKnown.map(s =>
+        el("li", {}, [el("a", { href: `#/secrets/${s.id}` }, [s.title || "(untitled)"])])
+      ))
+    ) : null,
+
+    hiddenFrom.length ? psection("Hidden from me",
+      el("ul", { class: "printed-secret-list" }, hiddenFrom.map(s =>
+        el("li", {}, [el("a", { href: `#/secrets/${s.id}` }, [s.title || "(untitled)"])])
+      ))
+    ) : null,
+
+    relsSorted.length ? psection("Relationships",
+      el("div", { class: "printed-rels" }, relRows)
+    ) : null,
+
+    character.cards?.notes ? psection("Notes",
+      el("div", { class: "printed-card-text" }, [character.cards.notes])
+    ) : null,
+  ]);
+
+  container.append(sheet);
+}
+
+// ── Editor (rendered into any container) ─────────────────────────────────────
+
+function renderEditorInto(container, character, appData, onDelete) {
   let savedPill = null;
 
   function showSavedPill() {
@@ -141,12 +281,15 @@ export function mountCharacterSheet(container, appData, id) {
 
   function handleDelete() {
     if (!confirm(`Delete "${displayName(character)}"? This cannot be undone.`)) return;
-    const idx = appData.characters.findIndex(c => c.id === id);
+    const idx = appData.characters.findIndex(c => c.id === character.id);
     if (idx !== -1) appData.characters.splice(idx, 1);
-    save("characters", appData.characters).then(() => navigate("characters"));
+    save("characters", appData.characters).then(() => {
+      navigate("characters");
+      onDelete();
+    });
   }
 
-  // ── Death date (defined early so deceasedCheck listener can close over it) ──
+  // ── Death date ──
   const deathDateInput = el("input", { type: "date", class: "sheet-input" });
   deathDateInput.value = character.deathDate ?? "";
   deathDateInput.addEventListener("input", () => {
@@ -192,20 +335,11 @@ export function mountCharacterSheet(container, appData, id) {
     debouncedSave();
   });
 
-  const supernaturalCheck = el("input", { type: "checkbox", id: "sheet-supernatural", class: "sheet-checkbox" });
-  supernaturalCheck.checked = !!character.knowsSupernatural;
-  supernaturalCheck.addEventListener("change", () => {
-    character.knowsSupernatural = supernaturalCheck.checked;
-    debouncedSave();
-  });
-
   const header = el("div", { class: "sheet-header" }, [
-    el("a", { class: "sheet-back", href: "#/characters" }, ["← Characters"]),
     el("div", { class: "sheet-name-group" }, [firstInput, middleInput, lastInput]),
     el("div", { class: "sheet-header-controls" }, [
       ownerSelect,
       el("label", { class: "sheet-deceased-label", for: "sheet-deceased" }, [deceasedCheck, "Deceased"]),
-      el("label", { class: "sheet-deceased-label", for: "sheet-supernatural" }, [supernaturalCheck, "Knows supernatural"]),
       el("button", { class: "btn-danger", onclick: handleDelete }, ["Delete"]),
     ]),
   ]);
@@ -601,4 +735,80 @@ export function mountCharacterSheet(container, appData, id) {
 
   bgTa.style.height = "auto";
   bgTa.style.height = (bgTa.scrollHeight || 320) + "px";
+}
+
+// ── Edit modal ───────────────────────────────────────────────────────────────
+
+function openCharacterEditor(character, appData, onClose) {
+  let closed = false;
+  const backdrop = el("div", { class: "ced-backdrop" });
+  const modal    = el("div", { class: "ced-modal" });
+  const body     = el("div", { class: "ced-body" });
+
+  function detach() {
+    document.removeEventListener("keydown", onEsc);
+    window.removeEventListener("route-change", onRouteChange);
+    backdrop.remove();
+  }
+
+  function closeModal() {
+    if (closed) return;
+    closed = true;
+    detach();
+    onClose();
+  }
+
+  // If navigation happens inside the modal (e.g. clicking a relationship link),
+  // the route handler has already rendered the new view — just remove the backdrop.
+  function onRouteChange() {
+    if (closed) return;
+    closed = true;
+    detach();
+  }
+
+  function onEsc(e) { if (e.key === "Escape") closeModal(); }
+  document.addEventListener("keydown", onEsc);
+  window.addEventListener("route-change", onRouteChange);
+  backdrop.addEventListener("click", e => { if (e.target === backdrop) closeModal(); });
+
+  const closeBtn = el("button", { class: "ced-close" }, ["✕"]);
+  closeBtn.addEventListener("click", closeModal);
+
+  modal.append(
+    el("div", { class: "ced-topbar" }, [
+      el("span", { class: "ced-title" }, [`Editing ${displayName(character)}`]),
+      closeBtn,
+    ]),
+    body,
+  );
+  backdrop.append(modal);
+  document.body.append(backdrop);
+
+  renderEditorInto(body, character, appData, () => {
+    // handleDelete navigated away — just remove the modal.
+    if (closed) return;
+    closed = true;
+    detach();
+  });
+}
+
+// ── Main export ──────────────────────────────────────────────────────────────
+
+export function mountCharacterSheet(container, appData, id) {
+  const character = appData.characters.find(c => c.id === id);
+  if (!character) {
+    container.append(el("p", { class: "placeholder-view" }, ["Character not found."]));
+    return;
+  }
+
+  function show() {
+    clear(container);
+    renderPrintedSheet(container, character, appData, openEdit);
+  }
+
+  function openEdit() {
+    openCharacterEditor(character, appData, show);
+  }
+
+  show();
 }
