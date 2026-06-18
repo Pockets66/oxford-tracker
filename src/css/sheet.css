@@ -168,6 +168,50 @@
   text-transform: uppercase;
 }
 
+/* ── Per-card pencil edit button ── */
+.sheet-card-edit {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  opacity: 0;
+  padding: 0.1rem 0.25rem;
+  transition: color 0.12s, opacity 0.12s;
+}
+
+.sheet-card:hover .sheet-card-edit,
+.sheet-card[data-editing] .sheet-card-edit {
+  opacity: 1;
+}
+
+.sheet-card-edit:hover {
+  color: var(--accent);
+}
+
+/* ── Edit form layout ── */
+.sc-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.sheet-card-done {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}
+
+.sc-delete-btn {
+  align-self: flex-start;
+}
+
+.sheet-label--inline {
+  align-items: center;
+  display: flex;
+  flex-direction: row;
+  gap: 0.35rem;
+}
+
 /* ── Sheet action button row ── */
 .sheet-button-row {
   display: flex;
