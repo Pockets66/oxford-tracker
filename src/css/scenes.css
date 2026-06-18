@@ -279,3 +279,116 @@
   border-top: 1px solid var(--border);
   padding-top: 1.25rem;
 }
+
+/* ── Factions + characters add rows ── */
+.scene-page-add-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.scene-page-add-row .combobox {
+  flex: 1;
+  min-width: 180px;
+}
+
+.scene-page-role-select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding: 0.3rem 0.4rem;
+}
+
+/* ── Faction chips (on page) ── */
+.scene-page-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.scene-page-faction-chip {
+  align-items: center;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  display: inline-flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  gap: 0.3rem;
+  padding: 0.2rem 0.5rem;
+}
+
+.scene-page-chip-remove {
+  background: none;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  font-size: 0.85rem;
+  line-height: 1;
+  opacity: 0.7;
+  padding: 0;
+}
+
+.scene-page-chip-remove:hover {
+  opacity: 1;
+}
+
+/* ── Characters list ── */
+.scene-page-char-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.scene-page-char-row {
+  align-items: center;
+  display: flex;
+  gap: 0.4rem;
+}
+
+.scene-page-char-name {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+}
+
+.scene-page-char-sep {
+  color: var(--text-muted);
+}
+
+.scene-page-char-role {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.35rem;
+}
+
+.scene-page-char-remove {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  margin-left: auto;
+  padding: 0 0.25rem;
+}
+
+.scene-page-char-remove:hover {
+  color: var(--danger);
+}
+
+/* ── Faction chips on overview cards ── */
+.scene-card-faction-chip {
+  border-radius: 0;
+  display: inline-block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+}

@@ -69,3 +69,8 @@
   font-style: italic;
   padding: 0.5rem 0.6rem;
 }
+
+.combobox-divider {
+  border-top: 1px solid var(--gold-soft);
+  margin: 0.2rem 0;
+}

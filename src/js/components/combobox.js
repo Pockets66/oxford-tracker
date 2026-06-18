@@ -1,12 +1,18 @@
 import { el, clear } from "../dom.js";
 
-export function createCombobox({ items, value, placeholder, onChange }) {
-  const sorted = [...items].sort((a, b) => a.label.localeCompare(b.label));
+// Items may include divider sentinels: { divider: true }
+// presorted: true — skip internal alphabetical sort (caller controls order)
+export function createCombobox({ items, value, placeholder, onChange, presorted = false }) {
+  const realItems = items.filter(i => !i.divider);
+  const sorted    = presorted
+    ? [...items]
+    : [...realItems].sort((a, b) => a.label.localeCompare(b.label));
 
   let selectedValue = value ?? "";
-  let filtered      = sorted;
+  let filtered      = [...realItems]; // keyboard nav uses real items only
   let activeIndex   = -1;
   let isOpen        = false;
+  let isFiltering   = false;
 
   const input = el("input", {
     type: "text",
@@ -14,7 +20,7 @@ export function createCombobox({ items, value, placeholder, onChange }) {
     placeholder: placeholder ?? "Search…",
     autocomplete: "off",
   });
-  input.value = sorted.find(i => i.value === selectedValue)?.label ?? "";
+  input.value = realItems.find(i => i.value === selectedValue)?.label ?? "";
 
   const chevron = el("span", { class: "combobox-chevron" }, ["▾"]);
   const listEl  = el("div",  { class: "combobox-dropdown" });
@@ -24,12 +30,22 @@ export function createCombobox({ items, value, placeholder, onChange }) {
 
   function renderList() {
     clear(listEl);
-    if (!filtered.length) {
+    // When filtering show only matching real items; when open show sorted (with dividers).
+    const displayList = isFiltering ? filtered : sorted;
+    const realCount   = displayList.filter(i => !i.divider).length;
+
+    if (!realCount) {
       listEl.append(el("div", { class: "combobox-empty" }, ["No results"]));
       return;
     }
-    for (let i = 0; i < filtered.length; i++) {
-      const item = filtered[i];
+
+    let realIdx = 0;
+    for (const item of displayList) {
+      if (item.divider) {
+        listEl.append(el("div", { class: "combobox-divider" }));
+        continue;
+      }
+      const i = realIdx++;
       const opt = el("div", {
         class: "combobox-option" + (i === activeIndex ? " combobox-option--active" : ""),
       }, [item.label]);
@@ -43,9 +59,10 @@ export function createCombobox({ items, value, placeholder, onChange }) {
 
   function open() {
     if (isOpen) return;
-    isOpen = true;
-    filtered = sorted;
-    activeIndex = filtered.findIndex(i => i.value === selectedValue);
+    isOpen      = true;
+    isFiltering = false;
+    filtered    = [...realItems];
+    activeIndex = realItems.findIndex(i => i.value === selectedValue);
     input.value = "";
     renderList();
     listEl.style.display = "block";
@@ -54,16 +71,18 @@ export function createCombobox({ items, value, placeholder, onChange }) {
 
   function close() {
     if (!isOpen) return;
-    isOpen = false;
+    isOpen      = false;
+    isFiltering = false;
     listEl.style.display = "none";
     activeIndex = -1;
-    input.value = sorted.find(i => i.value === selectedValue)?.label ?? "";
+    input.value = realItems.find(i => i.value === selectedValue)?.label ?? "";
   }
 
   function pick(val, label) {
     selectedValue = val;
     input.value   = label;
     isOpen        = false;
+    isFiltering   = false;
     listEl.style.display = "none";
     activeIndex   = -1;
     onChange(val);
@@ -78,9 +97,15 @@ export function createCombobox({ items, value, placeholder, onChange }) {
 
   input.addEventListener("input", () => {
     const q = input.value.toLowerCase();
-    filtered = q ? sorted.filter(i => i.label.toLowerCase().includes(q)) : sorted;
+    if (q) {
+      isFiltering = true;
+      filtered    = realItems.filter(i => i.label.toLowerCase().includes(q));
+    } else {
+      isFiltering = false;
+      filtered    = [...realItems];
+    }
     activeIndex = -1;
-    isOpen = true;
+    isOpen      = true;
     listEl.style.display = "block";
     renderList();
   });
@@ -97,7 +122,9 @@ export function createCombobox({ items, value, placeholder, onChange }) {
       renderList(); scrollActive();
     } else if (e.key === "Enter") {
       e.preventDefault();
-      if (activeIndex >= 0 && filtered[activeIndex]) pick(filtered[activeIndex].value, filtered[activeIndex].label);
+      if (activeIndex >= 0 && filtered[activeIndex]) {
+        pick(filtered[activeIndex].value, filtered[activeIndex].label);
+      }
     } else if (e.key === "Escape") {
       close();
     }

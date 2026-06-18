@@ -5,6 +5,14 @@ import { createScene } from "../schema.js";
 import { formatFlexibleDate } from "../dates.js";
 
 const SCENE_STATUSES = ["Draft", "In progress", "Complete"];
+
+function chipTextColor(hex) {
+  if (!hex || hex.length < 7) return "#f4ecd8";
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#2a1f15" : "#f4ecd8";
+}
 const STATUS_SLUG = {
   "Draft": "draft",
   "In progress": "in-progress",
@@ -47,7 +55,7 @@ function applyFilters(scenes, state) {
   return result;
 }
 
-function renderCard(scene) {
+function renderCard(scene, appData) {
   const slug = STATUS_SLUG[scene.status] ?? "draft";
   const statusChip = el("span", { class: `scene-status-chip scene-status-chip--${slug}` }, [scene.status ?? "Draft"]);
 
@@ -56,6 +64,24 @@ function renderCard(scene) {
 
   const charCount = (scene.characters ?? []).length;
 
+  // Faction chips
+  const factionChips = (scene.factionIds ?? []).map(fid => {
+    const f = appData.factions.find(x => x.id === fid);
+    const chip = el("span", { class: "scene-card-faction-chip" }, [f ? f.name : fid]);
+    if (f?.color) {
+      chip.style.background = f.color;
+      chip.style.color = chipTextColor(f.color);
+    }
+    return chip;
+  });
+
+  const footer = el("div", { class: "scene-card-footer" }, [
+    ...factionChips,
+    el("span", { class: "scene-card-count" }, [
+      `${charCount} character${charCount !== 1 ? "s" : ""}`,
+    ]),
+  ]);
+
   const card = el("article", { class: "scene-card" }, [
     el("div", { class: "scene-card-header" }, [
       el("h2", { class: "scene-card-title" }, [scene.title || "Untitled"]),
@@ -63,11 +89,7 @@ function renderCard(scene) {
     ]),
     metaStr ? el("p", { class: "scene-card-meta" }, [metaStr]) : null,
     scene.summary ? el("p", { class: "scene-card-summary" }, [scene.summary]) : null,
-    el("div", { class: "scene-card-footer" }, [
-      el("span", { class: "scene-card-count" }, [
-        `${charCount} character${charCount !== 1 ? "s" : ""}`,
-      ]),
-    ]),
+    footer,
   ].filter(Boolean));
 
   card.addEventListener("click", () => navigate(`scenes/${scene.id}`));
@@ -158,7 +180,7 @@ export function mountScenes(container, appData) {
     if (!visible.length) {
       grid.append(el("p", { class: "scene-empty" }, ["No scenes match."]));
     } else {
-      for (const s of visible) grid.append(renderCard(s));
+      for (const s of visible) grid.append(renderCard(s, appData));
     }
   }
 
