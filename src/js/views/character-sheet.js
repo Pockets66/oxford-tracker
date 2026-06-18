@@ -327,7 +327,16 @@ function renderFactionsRelsRO(ch, appData, onRelsChange) {
 
   parts.push(el("div", { class: "sc-rels-header" }, [
     el("span", { class: "sc-sublabel" }, ["Relationships"]),
-    el("button", { class: "btn-small", onclick: () => {} }, ["+ Add"]),
+    el("div", { class: "sc-rels-btns" }, [
+      el("button", { class: "btn-small", onclick: async () => {
+        const { openRelationshipBulkDialog } = await import("./relationship-bulk-dialog.js");
+        openRelationshipBulkDialog({ mode: "edit", holderId: ch.id, appData, onClose: onRelsChange });
+      }}, ["Edit"]),
+      el("button", { class: "btn-small", onclick: async () => {
+        const { openRelationshipBulkDialog } = await import("./relationship-bulk-dialog.js");
+        openRelationshipBulkDialog({ mode: "add", holderId: ch.id, appData, onClose: onRelsChange });
+      }}, ["+ Add"]),
+    ]),
   ]));
 
   parts.push(buildRelsEl(ch, appData, onRelsChange));
@@ -750,7 +759,16 @@ function editFactionsRels(ch, appData, persistMembership, done) {
     comboWrap,
     el("div", { class: "sc-rels-header" }, [
       el("span", { class: "sc-sublabel" }, ["Relationships"]),
-      el("button", { class: "btn-small", onclick: () => {} }, ["+ Add"]),
+      el("div", { class: "sc-rels-btns" }, [
+        el("button", { class: "btn-small", onclick: async () => {
+          const { openRelationshipBulkDialog } = await import("./relationship-bulk-dialog.js");
+          openRelationshipBulkDialog({ mode: "edit", holderId: ch.id, appData, onClose: refreshRels });
+        }}, ["Edit"]),
+        el("button", { class: "btn-small", onclick: async () => {
+          const { openRelationshipBulkDialog } = await import("./relationship-bulk-dialog.js");
+          openRelationshipBulkDialog({ mode: "add", holderId: ch.id, appData, onClose: refreshRels });
+        }}, ["+ Add"]),
+      ]),
     ]),
     relsEl,
     makeDoneBtn(done),

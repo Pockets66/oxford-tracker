@@ -1,0 +1,358 @@
+/* ── Bulk relationship dialog ── */
+
+.rbd-modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--gold);
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  width: min(82vw, 1000px);
+}
+
+.rbd-header {
+  align-items: center;
+  border-bottom: 1px solid var(--gold);
+  display: flex;
+  justify-content: space-between;
+  padding: 0.75rem 1.25rem;
+}
+
+.rbd-title {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.2rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.rbd-close-btn {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  padding: 0.2rem 0.4rem;
+  transition: color 0.12s;
+}
+.rbd-close-btn:hover { color: var(--accent); }
+
+/* ── Two-pane body ── */
+.rbd-body {
+  display: grid;
+  flex: 1;
+  grid-template-columns: 1fr 1fr;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 1100px) {
+  .rbd-body { grid-template-columns: 1fr; overflow-y: auto; }
+  .rbd-left, .rbd-right { overflow: visible; }
+}
+
+.rbd-left {
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rbd-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem;
+}
+
+/* ── Filter bar ── */
+.rbd-filter-bar {
+  align-items: center;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.6rem 0.85rem;
+}
+
+.rbd-search {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  flex: 1;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  min-width: 120px;
+  padding: 0.3rem 0.5rem;
+}
+
+.rbd-owner-btns {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.rbd-owner-btn {
+  background: none;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  height: 26px;
+  letter-spacing: 0;
+  padding: 0;
+  text-align: center;
+  transition: all 0.12s;
+  width: 26px;
+}
+
+.rbd-owner-btn.is-active {
+  background: var(--oc, var(--text-muted));
+  border-color: var(--oc, var(--text-muted));
+  color: #fff;
+}
+
+.rbd-faction-sel {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  max-width: 160px;
+  padding: 0.3rem 0.4rem;
+}
+
+/* ── Candidate list ── */
+.rbd-cand-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.25rem 0;
+}
+
+.rbd-cand-row {
+  align-items: center;
+  cursor: pointer;
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.35rem 0.85rem;
+  transition: background 0.1s;
+}
+.rbd-cand-row:hover { background: var(--bg); }
+
+.rbd-cand-check { cursor: pointer; flex-shrink: 0; }
+
+.rbd-cand-info {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+
+.rbd-cand-name {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rbd-cand-sub {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+}
+
+.rbd-cand-band {
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+.rbd-count-line {
+  border-top: 1px solid var(--border);
+  color: var(--text-muted);
+  flex-shrink: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+  padding: 0.45rem 0.85rem;
+}
+
+.rbd-sel-count { color: var(--accent); }
+
+/* ── Apply form ── */
+.rbd-apply-form {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  gap: 0.85rem;
+}
+
+.rbd-form-label {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.rbd-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.rbd-field-label {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.rbd-notes {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  min-height: 48px;
+  padding: 0.35rem 0.5rem;
+  resize: vertical;
+  width: 100%;
+}
+
+/* ── Band slider ── */
+.rbd-band-wrap { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.rbd-band-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  outline: none;
+}
+
+.rbd-band-seg {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.58rem;
+  letter-spacing: 0.02em;
+  padding: 0.3rem 0.1rem;
+  text-align: center;
+  transition: background 0.12s, color 0.12s;
+}
+
+.rbd-band-seg:not(:first-child) { border-left: none; }
+
+.rbd-band-seg.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.rbd-band-label {
+  color: var(--gold);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.05rem;
+  text-align: center;
+}
+
+/* ── Link checkboxes ── */
+.rbd-links-wrap { display: flex; flex-direction: column; gap: 0.2rem; }
+
+.rbd-link-category { border: 1px solid var(--border); }
+
+.rbd-link-cat-header {
+  align-items: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  font-weight: 500;
+  gap: 0.4rem;
+  justify-content: space-between;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.5rem;
+  text-transform: uppercase;
+  width: 100%;
+}
+.rbd-link-cat-header:hover { color: var(--accent); }
+
+.rbd-link-items {
+  display: grid;
+  gap: 0.2rem 0.75rem;
+  grid-template-columns: 1fr 1fr;
+  padding: 0.3rem 0.5rem 0.5rem;
+}
+
+.rbd-link-label {
+  align-items: center;
+  color: var(--text);
+  cursor: pointer;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  gap: 0.3rem;
+  user-select: none;
+}
+
+.rbd-link-check { cursor: pointer; }
+
+/* ── Reciprocal section ── */
+.rbd-recip-section {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.rbd-recip-rule { display: none; }
+
+.rbd-skip-label {
+  align-items: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  gap: 0.4rem;
+  user-select: none;
+}
+
+.rbd-recip-body {
+  border-left: 2px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-left: 0.75rem;
+}
+
+/* ── Footer ── */
+.rbd-footer {
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  padding-top: 0.85rem;
+}
+
+.rbd-remove-btn { margin-left: auto; }

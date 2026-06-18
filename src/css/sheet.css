@@ -289,6 +289,12 @@
   width: 100%;
 }
 
+/* ── Relationship section button group ── */
+.sc-rels-btns {
+  display: flex;
+  gap: 0.25rem;
+}
+
 /* ── Relationship rows ── */
 .rels-list {
   display: flex;
