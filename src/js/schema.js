@@ -3,6 +3,8 @@ const FACTION_PALETTE = [
   "#5b8a9a", "#8a9a5b", "#9a5b8a", "#6b8a6b", "#7a6b9a",
 ];
 
+export const LANGUAGE_LEVELS = ["Broken", "Accented", "Native"];
+
 // ── Relationship constants ────────────────────────────────────────────────────
 
 export const STRUCTURAL_TYPES = [
@@ -57,10 +59,11 @@ export function createCharacter() {
     previousNames: [],
     aliases: [],
     displayAliasIndex: null,
+    akaAliasIndices: [],
     age: null,
     birthday: null,
-    birthTime: null,
     placeOfBirth: "",
+    languages: [],
     deathDate: null,
     zodiac: { sun: null, moon: null, rising: null },
     owner: "NPC",

@@ -53,7 +53,7 @@ export function mountFactions(container, appData) {
   const filterBar = createFilterBar({
     searchPlaceholder: "Search factions",
     facets: [],
-  });
+  }, { persistKey: "factions" });
 
   const grid = el("div", { class: "faction-grid" });
 

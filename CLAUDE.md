@@ -34,7 +34,9 @@ oxford-tracker/
 
 Work is delivered in slices. Each slice has a prompt file in `prompts/` describing exactly what to build. You will be asked to execute one slice at a time.
 
-**You do not rewrite the app on every slice.** Read what exists, add or modify only what the current prompt asks for, leave everything else alone. If you think an earlier file needs refactoring to support the new slice, say so first and wait for confirmation. Do not silently restructure.
+**You do not rewrite the app on every slice.** without extended thinking: read only the relevant files, add or modify only what the current prompt asks for, leave everything else alone. If you think an earlier file needs refactoring to support the new slice, say so first and wait for confirmation. Do not silently restructure.
+
+
 
 When a slice is done, append a short note to ROADMAP.md under that slice marking it complete and listing any followups discovered along the way.
 
@@ -57,6 +59,16 @@ meta.json           schema version, last opened, etc
 Every entity has a stable `id` (use `crypto.randomUUID()`). Cross references use ids, never names. When the user changes a name the id does not change, so all links survive.
 
 Relationships are stored as directed edges. Each edge is `{ id, from, to, nature, notes }`. When the user adds a relationship from A to B, the app prompts for the reciprocal nature and writes both edges. Editing one edge does not auto edit the other, since asymmetry is the whole point (A has a crush, B sees a friend).
+
+## Migration policy
+
+This project is in development. The `user-data/` folder holds throwaway test
+data. Schema changes do NOT require migration code. New fields apply only to
+freshly-created entities; existing entities will be replaced wholesale by the
+final data import after all slices are complete.
+
+If a slice prompt seems to need migration logic, skip it. The final import
+will provide all data in the latest schema shape.
 
 ## UI rules
 
@@ -91,6 +103,20 @@ The data folder is created and seeded automatically on first launch. There is no
 - Function and variable names in camelCase, classes in PascalCase, constants in UPPER_SNAKE.
 - Keep functions small. If a file passes 300 lines, split it.
 - DOM access goes through small helpers in `js/dom.js`. Do not sprinkle `document.querySelector` everywhere.
+
+## Edit style
+
+Always prefer surgical edits via str_replace over file rewrites. Even when several
+changes are needed in one file, make them as separate str_replace operations rather
+than writing the file from scratch. A full file rewrite is only acceptable when:
+
+- A new file is being created
+- The file's entire structure is being reorganized (rare)
+- More than 70% of the existing file would be changed anyway
+
+Otherwise: find the relevant block, change just that block, leave everything else.
+This preserves comments, formatting, and any user edits that may have been made
+between slices.
 
 ## Git
 

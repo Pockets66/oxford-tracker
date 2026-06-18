@@ -2,7 +2,6 @@ import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
 import { createCharacter, displayName, computeAge } from "../schema.js";
-import { createFilterBar } from "../filters.js";
 
 function chipTextColor(hex) {
   if (!hex || hex.length < 7) return "#f4ecd8";
@@ -35,12 +34,55 @@ function ownerBorderStyle(ownerStr) {
 }
 
 const ALL_OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
+const PERSIST_KEY = "oxford-filters-characters";
 
-function applyFilters(characters, { search, facetValues }) {
+const DEFAULT_STATE = {
+  search:       "",
+  owner:        [...ALL_OWNERS],
+  faction:      [],
+  language:     [],
+  supernatural: null,
+  showDeceased: true,
+};
+
+function loadFilterState() {
+  try {
+    const raw = localStorage.getItem(PERSIST_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      return {
+        search:       s.search       ?? "",
+        owner:        Array.isArray(s.owner)    ? s.owner    : [...ALL_OWNERS],
+        faction:      Array.isArray(s.faction)  ? s.faction  : [],
+        language:     Array.isArray(s.language) ? s.language : [],
+        supernatural: s.supernatural !== undefined ? s.supernatural : null,
+        showDeceased: s.showDeceased !== undefined ? s.showDeceased : true,
+      };
+    }
+  } catch {}
+  return { ...DEFAULT_STATE, owner: [...ALL_OWNERS] };
+}
+
+function saveFilterState(state) {
+  try { localStorage.setItem(PERSIST_KEY, JSON.stringify(state)); } catch {}
+}
+
+function isFilterModified(state) {
+  return !!(
+    state.search ||
+    state.owner.length < ALL_OWNERS.length ||
+    state.faction.length ||
+    state.language.length ||
+    state.supernatural !== null ||
+    !state.showDeceased
+  );
+}
+
+function applyFilters(characters, state) {
   let result = characters;
 
-  if (search) {
-    const q = search.toLowerCase();
+  if (state.search) {
+    const q = state.search.toLowerCase();
     result = result.filter(c =>
       displayName(c).toLowerCase().includes(q) ||
       (c.aliases ?? []).some(a => a.toLowerCase().includes(q)) ||
@@ -49,22 +91,32 @@ function applyFilters(characters, { search, facetValues }) {
     );
   }
 
-  const ownerFilter = facetValues.owner ?? ALL_OWNERS;
-  if (ownerFilter.length < ALL_OWNERS.length) {
+  if (state.owner.length < ALL_OWNERS.length) {
     result = result.filter(c => {
       const owners = (c.owner || "NPC").split(",").map(s => s.trim());
-      return ownerFilter.some(o => owners.includes(o));
+      return state.owner.some(o => owners.includes(o));
     });
   }
 
-  const factionFilter = facetValues.faction ?? [];
-  if (factionFilter.length) {
+  if (state.faction.length) {
     result = result.filter(c =>
-      factionFilter.some(fId => (c.factionIds ?? []).includes(fId))
+      state.faction.some(fId => (c.factionIds ?? []).includes(fId))
     );
   }
 
-  if (!facetValues.showDeceased) {
+  if (state.language.length) {
+    result = result.filter(c =>
+      state.language.some(lang =>
+        (c.languages ?? []).some(l => l.name.toLowerCase() === lang.toLowerCase())
+      )
+    );
+  }
+
+  if (state.supernatural !== null) {
+    result = result.filter(c => !!c.knowsSupernatural === state.supernatural);
+  }
+
+  if (!state.showDeceased) {
     result = result.filter(c => !c.deceased);
   }
 
@@ -78,9 +130,13 @@ function renderCard(character, factions, currentDate) {
     character.zodiac?.rising,
   ].filter(Boolean);
 
-  const computed = computeAge(character, currentDate);
+  const computed   = computeAge(character, currentDate);
   const displayAge = computed ?? (character.birthday ? null : character.age);
-  const ageLabel = character.deceased && character.deathDate ? "Age at death" : "Age";
+  const ageLabel   = character.deceased && character.deathDate ? "Age at death" : "Age";
+
+  const akas = (character.akaAliasIndices ?? [])
+    .map(i => character.aliases?.[i])
+    .filter(Boolean);
 
   const card = el("article", {
     class: "character-card" + (character.deceased ? " character-card--deceased" : ""),
@@ -88,7 +144,7 @@ function renderCard(character, factions, currentDate) {
   }, [
     character.deceased ? el("span", { class: "character-deceased-tag" }, ["Deceased"]) : null,
     el("h2", { class: "character-name" }, [displayName(character)]),
-    character.aliases?.length ? el("p", { class: "character-aka" }, [`a.k.a. ${character.aliases[0]}`]) : null,
+    akas.length ? el("p", { class: "character-aka" }, [`a.k.a. ${akas.join(", ")}`]) : null,
     displayAge !== null ? el("p", { class: "character-meta" }, [`${ageLabel}: ${displayAge}`]) : null,
     zodiacParts.length ? el("p", { class: "character-zodiac" }, [zodiacParts.join(" / ")]) : null,
     el("span", { class: "character-owner-badge" }, [character.owner || "NPC"]),
@@ -116,50 +172,15 @@ function renderCard(character, factions, currentDate) {
 }
 
 export function mountCharacters(container, appData) {
-  async function handleNew() {
-    const character = createCharacter();
-    appData.characters.push(character);
-    await save("characters", appData.characters);
-    navigate(`characters/${character.id}`);
-  }
+  let filterState = loadFilterState();
 
-  const filterBar = createFilterBar({
-    searchPlaceholder: "Search characters",
-    facets: [
-      {
-        id: "owner", type: "owner-toggles",
-        options: [
-          { value: "Bree",   color: "var(--owner-bree)" },
-          { value: "Jack",   color: "var(--owner-jack)" },
-          { value: "Nicole", color: "var(--owner-nicole)" },
-          { value: "Caiden", color: "var(--owner-caiden)" },
-          { value: "NPC",    color: "var(--owner-npc)" },
-        ],
-      },
-      {
-        id: "faction", type: "faction-dropdown",
-        options: (appData.factions ?? []).map(f => ({ value: f.id, label: f.name, color: f.color })),
-      },
-      {
-        id: "showDeceased", label: "Show deceased",
-        type: "toggle", defaultValue: true,
-      },
-    ],
-  });
-
+  // ── Grid ──
   const grid = el("div", { class: "character-grid" });
-  const initialState = {
-    search: "",
-    facetValues: { owner: [...ALL_OWNERS], faction: [], showDeceased: true },
-  };
 
-  let currentState = initialState;
-
-  function renderGrid(state) {
-    currentState = state;
+  function renderGrid() {
     clear(grid);
-    const visible = applyFilters(appData.characters, state);
     const currentDate = appData.meta?.currentDate ?? null;
+    const visible = applyFilters(appData.characters, filterState);
     if (!visible.length) {
       grid.append(el("p", { class: "character-empty" }, ["No characters match."]));
     } else {
@@ -169,18 +190,213 @@ export function mountCharacters(container, appData) {
 
   function onDateChange() {
     if (!grid.isConnected) { window.removeEventListener("current-date-change", onDateChange); return; }
-    renderGrid(currentState);
+    renderGrid();
   }
   window.addEventListener("current-date-change", onDateChange);
 
-  filterBar.subscribe(state => renderGrid(state));
-  renderGrid(initialState);
+  // ── Filter change handler ──
+  function onChange() {
+    saveFilterState(filterState);
+    clearBtn.style.display = isFilterModified(filterState) ? "" : "none";
+    renderGrid();
+  }
+
+  // ── Search ──
+  const searchInput = el("input", {
+    type: "text", placeholder: "Search characters", class: "filter-search",
+  });
+  searchInput.value = filterState.search;
+  searchInput.addEventListener("input", () => { filterState.search = searchInput.value; onChange(); });
+
+  // ── Owner toggles ──
+  const ownerBtnMap = {};
+  const ownerToggleEl = el("div", { class: "filter-owner-toggles" });
+  for (const owner of ALL_OWNERS) {
+    const isOn = filterState.owner.includes(owner);
+    const btn = el("button", {
+      class: "owner-toggle " + (isOn ? "owner-toggle--on" : "owner-toggle--off"),
+      title: owner,
+    }, [owner[0]]);
+    btn.style.setProperty("--chip-color", OWNER_VARS[owner]);
+    btn.addEventListener("click", () => {
+      const idx = filterState.owner.indexOf(owner);
+      if (idx === -1) {
+        filterState.owner.push(owner);
+        btn.classList.add("owner-toggle--on");
+        btn.classList.remove("owner-toggle--off");
+      } else {
+        filterState.owner.splice(idx, 1);
+        btn.classList.remove("owner-toggle--on");
+        btn.classList.add("owner-toggle--off");
+      }
+      onChange();
+    });
+    ownerBtnMap[owner] = btn;
+    ownerToggleEl.append(btn);
+  }
+
+  // ── Faction filter ──
+  const factionChipsEl = el("div", { class: "filter-faction-chips" });
+
+  function renderFactionChips() {
+    clear(factionChipsEl);
+    for (const fId of filterState.faction) {
+      const f = (appData.factions ?? []).find(f2 => f2.id === fId);
+      const chip = el("span", { class: "filter-faction-active-chip" }, [
+        f?.name ?? fId,
+        el("button", { class: "filter-faction-chip-remove", onclick: () => {
+          filterState.faction = filterState.faction.filter(id => id !== fId);
+          renderFactionChips();
+          onChange();
+        }}, ["×"]),
+      ]);
+      if (f?.color) { chip.style.background = f.color; chip.style.color = chipTextColor(f.color); }
+      factionChipsEl.append(chip);
+    }
+  }
+
+  const factionSelect = el("select", { class: "filter-faction-select" });
+  factionSelect.append(el("option", { value: "" }, ["Filter by faction…"]));
+  for (const f of appData.factions ?? []) {
+    factionSelect.append(el("option", { value: f.id }, [f.name]));
+  }
+  factionSelect.addEventListener("change", () => {
+    const val = factionSelect.value;
+    if (!val || filterState.faction.includes(val)) { factionSelect.value = ""; return; }
+    filterState.faction = [...filterState.faction, val];
+    factionSelect.value = "";
+    renderFactionChips();
+    onChange();
+  });
+  renderFactionChips();
+
+  // ── Language filter ──
+  const langChipsEl = el("div", { class: "filter-faction-chips" });
+
+  function renderLangChips() {
+    clear(langChipsEl);
+    for (const lang of filterState.language) {
+      langChipsEl.append(el("span", { class: "filter-faction-active-chip" }, [
+        lang,
+        el("button", { class: "filter-faction-chip-remove", onclick: () => {
+          filterState.language = filterState.language.filter(l => l !== lang);
+          renderLangChips();
+          onChange();
+        }}, ["×"]),
+      ]));
+    }
+  }
+
+  const langSelect = el("select", { class: "filter-faction-select" });
+  langSelect.append(el("option", { value: "" }, ["Filter by language…"]));
+  for (const l of [...(appData.meta.knownLanguages ?? [])].sort()) {
+    langSelect.append(el("option", { value: l }, [l]));
+  }
+  langSelect.addEventListener("change", () => {
+    const val = langSelect.value;
+    if (!val || filterState.language.includes(val)) { langSelect.value = ""; return; }
+    filterState.language = [...filterState.language, val];
+    langSelect.value = "";
+    renderLangChips();
+    onChange();
+  });
+  renderLangChips();
+
+  // ── Supernatural 3-state cycle ──
+  const SUP_STATES = [null, true, false];
+  const SUP_LABELS = ["All", "Knows ✓", "Doesn't know"];
+  let supIdx = Math.max(0, SUP_STATES.indexOf(filterState.supernatural));
+  const supBtn = el("button", { class: "filter-3state-btn" });
+
+  function updateSupBtn() {
+    supBtn.textContent = `Supernatural: ${SUP_LABELS[supIdx]}`;
+    supBtn.classList.toggle("is-active", supIdx !== 0);
+  }
+  updateSupBtn();
+  supBtn.addEventListener("click", () => {
+    supIdx = (supIdx + 1) % SUP_STATES.length;
+    filterState.supernatural = SUP_STATES[supIdx];
+    updateSupBtn();
+    onChange();
+  });
+
+  // ── Deceased toggle ──
+  const deceasedCheck = el("input", { type: "checkbox", id: "filter-show-deceased" });
+  deceasedCheck.checked = filterState.showDeceased;
+  deceasedCheck.addEventListener("change", () => {
+    filterState.showDeceased = deceasedCheck.checked;
+    onChange();
+  });
+
+  // ── Filter panel (inline, toggleable) ──
+  const popover = el("div", { class: "filter-popover" });
+  popover.append(
+    el("div", { class: "filter-popover-row" }, [
+      el("span", { class: "filter-popover-label" }, ["Faction"]),
+      el("div", { class: "filter-faction-wrap" }, [factionSelect, factionChipsEl]),
+    ]),
+    el("div", { class: "filter-popover-row" }, [
+      el("span", { class: "filter-popover-label" }, ["Language"]),
+      el("div", { class: "filter-faction-wrap" }, [langSelect, langChipsEl]),
+    ]),
+    el("div", { class: "filter-popover-row" }, [
+      el("span", { class: "filter-popover-label" }, ["Supernatural"]),
+      supBtn,
+    ]),
+    el("div", { class: "filter-popover-row" }, [
+      el("label", { class: "filter-toggle", for: "filter-show-deceased" }, [deceasedCheck, "Show deceased"]),
+    ]),
+  );
+
+  const filterByBtn = el("button", { class: "btn-small filter-by-btn" }, ["Filter by ▾"]);
+  filterByBtn.addEventListener("click", () => {
+    const open = popover.classList.toggle("is-open");
+    filterByBtn.classList.toggle("is-active", open);
+    filterByBtn.textContent = open ? "Filter by ▴" : "Filter by ▾";
+  });
+
+  // ── Clear all filters ──
+  const clearBtn = el("button", { class: "btn-link filter-clear-btn" }, ["Clear filters"]);
+  clearBtn.style.display = isFilterModified(filterState) ? "" : "none";
+  clearBtn.addEventListener("click", () => {
+    filterState = { ...DEFAULT_STATE, owner: [...ALL_OWNERS] };
+    searchInput.value = "";
+    for (const [owner, btn] of Object.entries(ownerBtnMap)) {
+      btn.classList.add("owner-toggle--on");
+      btn.classList.remove("owner-toggle--off");
+    }
+    renderFactionChips();
+    renderLangChips();
+    supIdx = 0;
+    updateSupBtn();
+    deceasedCheck.checked = true;
+    try { localStorage.removeItem(PERSIST_KEY); } catch {}
+    clearBtn.style.display = "none";
+    renderGrid();
+  });
+
+  // ── New character ──
+  async function handleNew() {
+    const character = createCharacter();
+    appData.characters.push(character);
+    await save("characters", appData.characters);
+    navigate(`characters/${character.id}`);
+  }
+
+  const topBar = el("div", { class: "filter-inline-bar" }, [
+    searchInput,
+    ownerToggleEl,
+    clearBtn,
+    filterByBtn,
+  ]);
+
+  renderGrid();
 
   container.append(
     el("div", { class: "characters-toolbar" }, [
       el("button", { class: "btn-primary", onclick: handleNew }, ["New character"]),
     ]),
-    filterBar.node,
-    grid
+    topBar,
+    el("div", { class: "characters-body" }, [grid, popover])
   );
 }

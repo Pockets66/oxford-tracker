@@ -121,6 +121,30 @@ Cytoscape graph view on the Factions tab showing every faction as a large node a
 
 List/Map toggle on the Factions overview (List default). Map lazy-loads Cytoscape via dynamic import. Factions are 80px colored nodes; characters are 28px owner-colored nodes connected by faction-colored edges. Deceased nodes dim to 45% opacity. Search filters both views. `knowsSupernatural: false` added to new characters (no migration; data import handles existing characters). `ownerColor` extracted to `src/js/util/owner-color.js` and shared with relationship web.
 
+## Slice 5.5: Character sheet polish + persistent filter panel
+
+**Status: done** — 2026-06-18
+
+Eight improvements delivered:
+1. `birthTime` removed from schema defaults and character sheet UI.
+2. Death date row shows/hides dynamically on the deceased toggle.
+3. Sun sign always visible in the main identity row; Moon / Rising / Place of birth moved behind "+ More astrological info" expander (auto-expanded when any field is set).
+4. Aliases list gains two checkboxes per chip: "Display as primary name" (`displayAliasIndex`) and "Show as a.k.a." (`akaAliasIndices`). Character cards use `akaAliasIndices` for the a.k.a. line.
+5. Languages card in the right column: combobox from `meta.knownLanguages`, "+ Add new language…" option writes back to meta, level dropdown (Broken / Accented / Native via `LANGUAGE_LEVELS`).
+6. "Knows supernatural" checkbox added to the character sheet header controls.
+7. Secrets card shows a placeholder note (secrets tracking deferred to a future slice).
+8. Edit button on relationship rows no longer disabled for deceased characters — the row stays dimmed but the dialog opens normally.
+
+Filter panel (Characters overview):
+- Inline bar: search + owner toggles + "Clear filters" (shown only when any filter is non-default) + "Filter by ▾" button.
+- Popover (below "Filter by ▾"): faction dropdown-chip, language dropdown-chip, supernatural 3-state cycle button, Show deceased toggle.
+- Filter state persists via `localStorage` (key `oxford-filters-characters`).
+- Factions overview filter bar now persists via `localStorage` (key `oxford-filters-factions`).
+
+Followups:
+- Language filter popover won't update its dropdown if new languages are added in the same session without a page reload (stale options). Refresh popover on re-open in a later pass.
+- "Only show filled fields in read mode" on the character sheet is deferred to Slice 6.5.
+
 ## Slice 6: Scenes CRUD
 
 Scenes tab with card preview grid and per scene page. Fields: title, summary, body, status (draft, in progress, complete), **story beats** (what needs to happen, free text or list), **goals** (what we want out of this scene), attached plotlines (chosen later), characters with role per character (Key Actor, Observer, Background). Character add control uses a smart dropdown: if the scene has a faction attached, prioritize that faction's members. Otherwise prioritize characters who already know other characters in the scene (via the relationships graph).

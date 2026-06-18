@@ -8,26 +8,52 @@ function chipTextColor(hex) {
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#2a1f15" : "#f4ecd8";
 }
 
-export function createFilterBar(config) {
+export function createFilterBar(config, { persistKey } = {}) {
   const { searchPlaceholder = "Search", facets = [] } = config;
+  const STORE_KEY = persistKey ? `oxford-filters-${persistKey}` : null;
   const listeners = [];
-  let state = { search: "", facetValues: {} };
 
-  for (const f of facets) {
-    if (f.type === "owner-toggles") {
-      state.facetValues[f.id] = f.defaultValue ?? (f.options ?? []).map(o => o.value ?? o);
-    } else if (f.type === "faction-dropdown") {
-      state.facetValues[f.id] = [];
-    } else {
-      state.facetValues[f.id] = f.defaultValue ?? (f.type === "multi" ? [] : false);
+  // Build default state.
+  function buildDefaults() {
+    const defs = { search: "", facetValues: {} };
+    for (const f of facets) {
+      if (f.type === "owner-toggles") {
+        defs.facetValues[f.id] = f.defaultValue ?? (f.options ?? []).map(o => o.value ?? o);
+      } else if (f.type === "faction-dropdown") {
+        defs.facetValues[f.id] = [];
+      } else {
+        defs.facetValues[f.id] = f.defaultValue ?? (f.type === "multi" ? [] : false);
+      }
     }
+    return defs;
+  }
+
+  let state = buildDefaults();
+
+  // Load persisted state if available.
+  if (STORE_KEY) {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORE_KEY) || "null");
+      if (saved) {
+        if (saved.search != null) state.search = saved.search;
+        if (saved.facetValues) {
+          for (const f of facets) {
+            if (f.id in saved.facetValues) state.facetValues[f.id] = saved.facetValues[f.id];
+          }
+        }
+      }
+    } catch {}
   }
 
   function notify() {
+    if (STORE_KEY) {
+      try { localStorage.setItem(STORE_KEY, JSON.stringify(state)); } catch {}
+    }
     for (const cb of listeners) cb({ ...state, facetValues: { ...state.facetValues } });
   }
 
   const searchInput = el("input", { type: "text", placeholder: searchPlaceholder, class: "filter-search" });
+  searchInput.value = state.search;
   searchInput.addEventListener("input", () => { state.search = searchInput.value; notify(); });
 
   const facetNodes = facets.map((f) => {
@@ -54,24 +80,26 @@ export function createFilterBar(config) {
     }
 
     if (f.type === "owner-toggles") {
+      const active = state.facetValues[f.id];
       const chips = (f.options ?? []).map(opt => {
         const value = opt.value ?? opt;
         const color = opt.color ?? "var(--text-muted)";
-        const btn = el("button", { class: "owner-toggle owner-toggle--on", title: value }, [value[0]]);
+        const isOn  = active.includes(value);
+        const btn = el("button", { class: `owner-toggle ${isOn ? "owner-toggle--on" : "owner-toggle--off"}`, title: value }, [value[0]]);
         btn.style.setProperty("--chip-color", color);
         btn.addEventListener("click", () => {
-          const active = state.facetValues[f.id];
-          const idx = active.indexOf(value);
+          const cur = state.facetValues[f.id];
+          const idx = cur.indexOf(value);
           if (idx === -1) {
-            active.push(value);
+            cur.push(value);
             btn.classList.add("owner-toggle--on");
             btn.classList.remove("owner-toggle--off");
           } else {
-            active.splice(idx, 1);
+            cur.splice(idx, 1);
             btn.classList.remove("owner-toggle--on");
             btn.classList.add("owner-toggle--off");
           }
-          state.facetValues[f.id] = [...active];
+          state.facetValues[f.id] = [...cur];
           notify();
         });
         return btn;
@@ -115,6 +143,7 @@ export function createFilterBar(config) {
         notify();
       });
 
+      renderChips();
       return el("div", { class: "filter-faction-wrap" }, [select, chipsEl]);
     }
 
@@ -126,5 +155,19 @@ export function createFilterBar(config) {
   return {
     node: bar,
     subscribe(cb) { listeners.push(cb); },
+    clearAll() {
+      state = buildDefaults();
+      searchInput.value = "";
+      if (STORE_KEY) try { localStorage.removeItem(STORE_KEY); } catch {}
+      notify();
+    },
+    isModified() {
+      if (state.search) return true;
+      const defs = buildDefaults();
+      for (const f of facets) {
+        if (JSON.stringify(state.facetValues[f.id]) !== JSON.stringify(defs.facetValues[f.id])) return true;
+      }
+      return false;
+    },
   };
 }

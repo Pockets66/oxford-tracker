@@ -121,12 +121,6 @@
   opacity: 0.55;
 }
 
-.rel-row--frozen .btn-small:not(.btn-small--danger) {
-  pointer-events: none;
-  border-color: var(--border);
-  color: var(--text-muted);
-}
-
 .rel-other-name {
   color: var(--accent);
   font-family: 'EB Garamond', Georgia, serif;
@@ -176,4 +170,88 @@
 .btn-small--danger:hover {
   border-color: var(--danger);
   color: var(--danger);
+}
+
+/* ── Astrological details expander ── */
+.sheet-astro-toggle {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  margin-top: 0.15rem;
+  padding: 0;
+  transition: color 0.12s;
+}
+
+.sheet-astro-toggle:hover {
+  color: var(--accent);
+}
+
+.sheet-astro-extra {
+  margin-top: 0.25rem;
+}
+
+/* ── a.k.a. checkbox ── */
+.alias-aka-check {
+  cursor: pointer;
+  flex-shrink: 0;
+  margin-right: 0.15rem;
+}
+
+/* ── Languages card ── */
+.lang-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.lang-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  min-height: 0.5rem;
+}
+
+.lang-row {
+  align-items: center;
+  display: flex;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.82rem;
+  gap: 0.3rem;
+}
+
+.lang-name {
+  color: var(--text);
+  font-weight: 500;
+}
+
+.lang-sep,
+.lang-level {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.lang-remove {
+  margin-left: auto;
+}
+
+.lang-add-row {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.lang-combobox-wrap {
+  flex: 1;
+  min-width: 130px;
+}
+
+.lang-level-sel {
+  min-width: 90px;
+  width: auto !important;
 }

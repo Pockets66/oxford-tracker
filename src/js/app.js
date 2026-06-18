@@ -134,6 +134,8 @@ async function init() {
       needMetaSave = true;
     }
 
+    appData.meta.knownLanguages ??= [];
+
     const writes = [];
     if (needCharSave) writes.push(save("characters", appData.characters));
     if (needRelSave)  writes.push(save("relationships", appData.relationships));

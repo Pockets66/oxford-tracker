@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { syncFactionMembership, displayName, computeAge } from "../schema.js";
+import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS } from "../schema.js";
 import { sunSignFromDate } from "../zodiac.js";
 import { openRelationshipDialog } from "./relationship-dialog.js";
 import { createCombobox } from "../components/combobox.js";
@@ -34,7 +34,8 @@ function signSelect(value) {
   return sel;
 }
 
-// opts.withPrimary: true → show alias-as-primary checkbox per chip
+// opts.withPrimary: show "display as primary name" checkbox per chip
+// opts.withAka: show "display as a.k.a." checkbox per chip
 function makeNameList(ch, key, label, onSave, opts = {}) {
   const summaryEl = el("summary", { class: "name-list-summary" });
   const chipsEl   = el("div",    { class: "name-chips" });
@@ -52,6 +53,11 @@ function makeNameList(ch, key, label, onSave, opts = {}) {
           if (ch.displayAliasIndex === i) ch.displayAliasIndex = null;
           else if (ch.displayAliasIndex != null && ch.displayAliasIndex > i) ch.displayAliasIndex--;
         }
+        if (opts.withAka) {
+          ch.akaAliasIndices = (ch.akaAliasIndices ?? [])
+            .filter(x => x !== i)
+            .map(x => x > i ? x - 1 : x);
+        }
         ch[key].splice(i, 1);
         onSave();
         render();
@@ -59,7 +65,7 @@ function makeNameList(ch, key, label, onSave, opts = {}) {
 
       const chipChildren = [];
       if (opts.withPrimary) {
-        const primaryCheck = el("input", { type: "checkbox", class: "alias-primary-check", title: "Use as primary display name" });
+        const primaryCheck = el("input", { type: "checkbox", class: "alias-primary-check", title: "Display as primary name" });
         primaryCheck.checked = ch.displayAliasIndex === i;
         primaryCheck.addEventListener("change", () => {
           ch.displayAliasIndex = primaryCheck.checked ? i : null;
@@ -67,6 +73,20 @@ function makeNameList(ch, key, label, onSave, opts = {}) {
           render();
         });
         chipChildren.push(primaryCheck);
+      }
+      if (opts.withAka) {
+        const akaCheck = el("input", { type: "checkbox", class: "alias-aka-check", title: "Show as a.k.a. on card" });
+        akaCheck.checked = (ch.akaAliasIndices ?? []).includes(i);
+        akaCheck.addEventListener("change", () => {
+          ch.akaAliasIndices = ch.akaAliasIndices ?? [];
+          if (akaCheck.checked) {
+            if (!ch.akaAliasIndices.includes(i)) ch.akaAliasIndices.push(i);
+          } else {
+            ch.akaAliasIndices = ch.akaAliasIndices.filter(x => x !== i);
+          }
+          onSave();
+        });
+        chipChildren.push(akaCheck);
       }
       chipChildren.push(v, removeBtn);
       chipsEl.append(el("span", { class: "name-chip" }, chipChildren));
@@ -140,7 +160,7 @@ export function mountCharacterSheet(container, appData, id) {
   ]);
   deathDateRow.hidden = !character.deceased;
 
-  // ── Header: name inputs ──
+  // ── Header inputs ──
   const firstInput  = el("input", { type: "text", class: "sheet-name-part name-part--first",  placeholder: "First name" });
   const middleInput = el("input", { type: "text", class: "sheet-name-part name-part--middle", placeholder: "Middle" });
   const lastInput   = el("input", { type: "text", class: "sheet-name-part name-part--last",   placeholder: "Last name" });
@@ -172,12 +192,20 @@ export function mountCharacterSheet(container, appData, id) {
     debouncedSave();
   });
 
+  const supernaturalCheck = el("input", { type: "checkbox", id: "sheet-supernatural", class: "sheet-checkbox" });
+  supernaturalCheck.checked = !!character.knowsSupernatural;
+  supernaturalCheck.addEventListener("change", () => {
+    character.knowsSupernatural = supernaturalCheck.checked;
+    debouncedSave();
+  });
+
   const header = el("div", { class: "sheet-header" }, [
     el("a", { class: "sheet-back", href: "#/characters" }, ["← Characters"]),
     el("div", { class: "sheet-name-group" }, [firstInput, middleInput, lastInput]),
     el("div", { class: "sheet-header-controls" }, [
       ownerSelect,
       el("label", { class: "sheet-deceased-label", for: "sheet-deceased" }, [deceasedCheck, "Deceased"]),
+      el("label", { class: "sheet-deceased-label", for: "sheet-supernatural" }, [supernaturalCheck, "Knows supernatural"]),
       el("button", { class: "btn-danger", onclick: handleDelete }, ["Delete"]),
     ]),
   ]);
@@ -204,7 +232,7 @@ export function mountCharacterSheet(container, appData, id) {
 
   renderAgeField();
 
-  // ── Birthday ──
+  // ── Birthday & sun sign ──
   const birthdayInput = el("input", { type: "date", class: "sheet-input" });
   birthdayInput.value = character.birthday ?? "";
 
@@ -217,10 +245,7 @@ export function mountCharacterSheet(container, appData, id) {
     debouncedSave();
   });
 
-  const birthTimeInput = el("input", { type: "time", class: "sheet-input" });
-  birthTimeInput.value = character.birthTime ?? "";
-  birthTimeInput.addEventListener("input", () => { character.birthTime = birthTimeInput.value || null; debouncedSave(); });
-
+  // ── Astrological details (collapsible) ──
   const placeInput = el("input", { type: "text", class: "sheet-input sheet-input--wide", placeholder: "Place of birth" });
   placeInput.value = character.placeOfBirth ?? "";
   placeInput.addEventListener("input", () => { character.placeOfBirth = placeInput.value; debouncedSave(); });
@@ -230,20 +255,36 @@ export function mountCharacterSheet(container, appData, id) {
   const risingSel = signSelect(character.zodiac.rising);
   risingSel.addEventListener("change", () => { character.zodiac.rising = risingSel.value || null; debouncedSave(); });
 
+  const astroOpen = !!(character.zodiac?.moon || character.zodiac?.rising || character.placeOfBirth);
+  const astroBody = el("div", { class: "sheet-astro-extra" }, [
+    el("div", { class: "sheet-row" }, [
+      el("label", { class: "sheet-label" }, ["Moon ☽", moonSel]),
+      el("label", { class: "sheet-label" }, ["Rising ↑", risingSel]),
+      el("label", { class: "sheet-label" }, ["Place of birth", placeInput]),
+    ]),
+  ]);
+  if (!astroOpen) astroBody.hidden = true;
+
+  const astroToggleBtn = el("button", { class: "btn-link sheet-astro-toggle" }, [
+    astroOpen ? "▾ Astrological details" : "+ More astrological info",
+  ]);
+  astroToggleBtn.addEventListener("click", () => {
+    astroBody.hidden = !astroBody.hidden;
+    astroToggleBtn.textContent = astroBody.hidden
+      ? "+ More astrological info"
+      : "▾ Astrological details";
+  });
+
   const identitySection = el("section", { class: "sheet-section" }, [
     el("h3", { class: "sheet-section-title" }, ["Identity"]),
     el("div", { class: "sheet-row" }, [
       ageWrapper,
       el("label", { class: "sheet-label" }, ["Birthday", birthdayInput]),
-      el("label", { class: "sheet-label" }, ["Birth time", birthTimeInput]),
-      el("label", { class: "sheet-label" }, ["Place of birth", placeInput]),
+      el("label", { class: "sheet-label" }, ["Sun ☀", sunDisplay]),
     ]),
     deathDateRow,
-    el("div", { class: "sheet-row" }, [
-      el("label", { class: "sheet-label" }, ["Sun ☀", sunDisplay]),
-      el("label", { class: "sheet-label" }, ["Moon ☽", moonSel]),
-      el("label", { class: "sheet-label" }, ["Rising ↑", risingSel]),
-    ]),
+    astroToggleBtn,
+    astroBody,
   ]);
 
   // ── Subscribe to campaign date changes ──
@@ -323,6 +364,85 @@ export function mountCharacterSheet(container, appData, id) {
 
   renderFactionPicker();
 
+  // ── Languages card ──
+  function makeLanguagesCard() {
+    character.languages ??= [];
+    const rowsEl = el("div", { class: "lang-rows" });
+
+    function renderLangRows() {
+      clear(rowsEl);
+      for (let i = 0; i < character.languages.length; i++) {
+        const entry = character.languages[i];
+        const idx   = i;
+        const removeBtn = el("button", { class: "name-chip-remove lang-remove", onclick: () => {
+          character.languages.splice(idx, 1);
+          persist();
+          renderLangRows();
+        }}, ["×"]);
+        rowsEl.append(el("div", { class: "lang-row" }, [
+          el("span", { class: "lang-name" }, [entry.name]),
+          el("span", { class: "lang-sep" }, [" — "]),
+          el("span", { class: "lang-level" }, [entry.level]),
+          removeBtn,
+        ]));
+      }
+    }
+
+    let selectedLang = "";
+    const comboboxWrap = el("div", { class: "lang-combobox-wrap" });
+
+    const levelSel = el("select", { class: "sheet-input lang-level-sel" });
+    for (const lv of LANGUAGE_LEVELS) {
+      levelSel.append(el("option", { value: lv }, [lv]));
+    }
+
+    const addBtn = el("button", { class: "btn-small", onclick: () => {
+      if (!selectedLang || selectedLang === "__new__") return;
+      character.languages.push({ name: selectedLang, level: levelSel.value });
+      selectedLang = "";
+      persist();
+      renderLangRows();
+      rebuildCombobox();
+    }}, ["Add"]);
+
+    function rebuildCombobox() {
+      clear(comboboxWrap);
+      const items = [
+        ...(appData.meta.knownLanguages ?? []).sort((a, b) => a.localeCompare(b)).map(l => ({ value: l, label: l })),
+        { value: "__new__", label: "+ Add new language…" },
+      ];
+      comboboxWrap.append(createCombobox({
+        items,
+        value: "",
+        placeholder: "Select language…",
+        onChange: (val) => {
+          if (val === "__new__") {
+            const name = prompt("New language name:")?.trim();
+            if (!name) return;
+            appData.meta.knownLanguages ??= [];
+            if (!appData.meta.knownLanguages.includes(name)) {
+              appData.meta.knownLanguages.push(name);
+              appData.meta.knownLanguages.sort((a, b) => a.localeCompare(b));
+              save("meta", appData.meta);
+            }
+            selectedLang = name;
+            rebuildCombobox();
+          } else {
+            selectedLang = val;
+          }
+        },
+      }));
+    }
+
+    rebuildCombobox();
+    renderLangRows();
+
+    return el("div", { class: "lang-card-body" }, [
+      rowsEl,
+      el("div", { class: "lang-add-row" }, [comboboxWrap, levelSel, addBtn]),
+    ]);
+  }
+
   // ── Relationships ──
   const relsEl = el("div", { class: "rels-list" });
 
@@ -330,7 +450,6 @@ export function mountCharacterSheet(container, appData, id) {
     clear(relsEl);
     const mine = (appData.relationships ?? []).filter(r => r.from === character.id);
 
-    // Sort: living first (alpha by name), deceased last (alpha by name).
     mine.sort((a, b) => {
       const aOther    = appData.characters.find(c => c.id === a.to);
       const bOther    = appData.characters.find(c => c.id === b.to);
@@ -349,24 +468,18 @@ export function mountCharacterSheet(container, appData, id) {
       const other  = appData.characters.find(c => c.id === rel.to);
       const frozen = !!other?.deceased;
 
-      // Type line: structural + social labels.
       const typeParts = [];
       if (rel.structuralType) typeParts.push(rel.structuralType);
       if (rel.socialLabels?.length) typeParts.push(...rel.socialLabels);
       const typeStr = typeParts.length ? ` — ${typeParts.join(", ")}` : "";
 
-      // Feeling line: platonic · romantic.
       const feelParts = [rel.platonic, rel.romantic].filter(Boolean);
       const feelStr   = feelParts.join(" · ");
 
       const editBtn = el("button", { class: "btn-small" }, ["Edit"]);
-      if (frozen) {
-        editBtn.disabled = true;
-      } else {
-        editBtn.addEventListener("click", () => {
-          openRelationshipDialog(appData, character.id, rel.id, renderRelationships);
-        });
-      }
+      editBtn.addEventListener("click", () => {
+        openRelationshipDialog(appData, character.id, rel.id, renderRelationships);
+      });
 
       const deleteBtn = el("button", { class: "btn-small btn-small--danger" });
       deleteBtn.addEventListener("click", () => removeRel(rel));
@@ -374,7 +487,7 @@ export function mountCharacterSheet(container, appData, id) {
 
       const row = el("div", {
         class: "rel-row" + (frozen ? " rel-row--frozen" : ""),
-        title: frozen ? "Frozen at this character's death." : "",
+        title: frozen ? "This character is deceased." : "",
       }, [
         el("div", { class: "rel-row-main" }, [
           el("a", { class: "rel-other-name", href: `#/characters/${rel.to}` },
@@ -427,7 +540,7 @@ export function mountCharacterSheet(container, appData, id) {
     el("div", { class: "sheet-layout" }, [
       el("div", { class: "sheet-main" }, [
         makeNameList(character, "previousNames", "Previous names", debouncedSave),
-        makeNameList(character, "aliases", "Aliases / codenames", debouncedSave, { withPrimary: true }),
+        makeNameList(character, "aliases", "Aliases / codenames", debouncedSave, { withPrimary: true, withAka: true }),
         identitySection,
         el("section", { class: "sheet-section" }, [
           el("h3", { class: "sheet-section-title" }, ["Summary"]),
@@ -457,8 +570,9 @@ export function mountCharacterSheet(container, appData, id) {
       ]),
       el("div", { class: "sheet-cards" }, [
         makeCard("Current Plots", el("p", { class: "sheet-empty-note" }, ["No current plots."])),
+        makeCard("Languages", makeLanguagesCard()),
         makeCard("Skills",  cardTa("skills")),
-        makeCard("Secrets", cardTa("secrets")),
+        makeCard("Secrets", el("p", { class: "sheet-empty-note" }, ["Secrets will be tracked in the Secrets tab."])),
         makeCard("Notes",   cardTa("notes")),
       ]),
     ])
