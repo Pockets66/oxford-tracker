@@ -193,6 +193,24 @@ export function createScene() {
   };
 }
 
+export function createPlotline() {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    summary: "",
+    body: "",
+    color: "#4a6b8a",
+    isSecret: false,
+    characterIds: [],
+    factionIds: [],
+    items: [],
+    notes: "",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 // ── Migrations ───────────────────────────────────────────────────────────────
 
 // Migration v1→v2: old `sheet` shape → new `background` + `cards` shape.

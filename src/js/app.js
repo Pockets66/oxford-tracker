@@ -7,6 +7,7 @@ import { mountFactions } from "./views/factions.js";
 import { mountFactionPage } from "./views/faction-page.js";
 import { mountScenes } from "./views/scenes.js";
 import { mountScenePage } from "./views/scene-page.js";
+import { mountPlotlines } from "./views/plotlines.js";
 import { mountSecrets } from "./views/secrets.js";
 import { mountSecretPage } from "./views/secret-page.js";
 import { migrateCharacters, migrateNamesToV3, migrateToV4 } from "./schema.js";
@@ -22,7 +23,6 @@ const TABS = [
 ];
 
 const COMING_SLICE = {
-  plotlines: "Slice 8",
   anomalies: "Slice 10",
 };
 
@@ -40,6 +40,11 @@ function mountView(tab, id) {
     } else {
       mountCharacters(main, appData);
     }
+    return;
+  }
+
+  if (tab === "plotlines") {
+    mountPlotlines(main, appData, id);
     return;
   }
 
@@ -154,8 +159,9 @@ async function init() {
     }
 
     appData.meta.knownLanguages ??= [];
-    appData.secrets ??= [];
-    appData.scenes  ??= [];
+    appData.secrets   ??= [];
+    appData.scenes    ??= [];
+    appData.plotlines ??= [];
 
     const writes = [];
     if (needCharSave) writes.push(save("characters", appData.characters));
