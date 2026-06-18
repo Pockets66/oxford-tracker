@@ -1,0 +1,182 @@
+/* ── Global Timeline tab ── */
+
+/* Full-height modifier applied to #main while timeline is mounted */
+#main.gtl-main {
+  overflow: hidden;
+  padding: 0;
+}
+
+.gtl-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* ── Toolbar ── */
+.gtl-toolbar {
+  align-items: center;
+  background: var(--bg-surface);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  flex-shrink: 0;
+  gap: 0.5rem;
+  justify-content: space-between;
+  padding: 0.5rem 0.75rem;
+  flex-wrap: wrap;
+}
+
+.gtl-toolbar-left {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.gtl-toolbar-right {
+  align-items: center;
+  display: flex;
+  gap: 0.5rem;
+}
+
+/* ── Kind toggles ── */
+.gtl-kind-toggles,
+.gtl-status-toggles {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.gtl-kind-toggle,
+.gtl-status-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
+  letter-spacing: 0.04em;
+  padding: 0.2rem 0.55rem;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.gtl-kind-toggle.is-active {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+}
+
+.gtl-status-toggle.gtl-status--draft.is-active {
+  background: var(--text-muted);
+  border-color: var(--text-muted);
+  color: var(--bg);
+}
+
+.gtl-status-toggle.gtl-status--inprogress.is-active {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg);
+}
+
+.gtl-status-toggle.gtl-status--complete.is-active {
+  background: var(--success, #3d7a4a);
+  border-color: var(--success, #3d7a4a);
+  color: #fff;
+}
+
+/* ── Canvas ── */
+.gtl-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.gtl-error {
+  color: var(--danger);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.85rem;
+  margin: 1.5rem;
+}
+
+/* ── Date range ── */
+.gtl-date-range {
+  align-items: center;
+  display: flex;
+  gap: 0.35rem;
+}
+
+.gtl-date-label {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+}
+
+.gtl-date-input {
+  background: var(--bg-input, var(--bg));
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  padding: 0.2rem 0.4rem;
+  width: 130px;
+}
+
+/* ── Popover ── */
+.gtl-popover {
+  max-width: 500px;
+  right: 0.75rem;
+  top: 3rem;
+  width: 90vw;
+}
+
+/* ── vis-timeline item overrides ── */
+.gtl-scene-complete.vis-item {
+  background-color: var(--success, #3d7a4a);
+  border-color: var(--success, #3d7a4a);
+  color: #fff;
+  cursor: pointer;
+}
+
+.gtl-scene-inprogress.vis-item {
+  background-color: var(--gold);
+  border-color: var(--gold);
+  color: var(--bg);
+  cursor: pointer;
+}
+
+.gtl-scene-draft.vis-item {
+  background-color: var(--text-muted);
+  border-color: var(--text-muted);
+  color: var(--bg);
+  cursor: pointer;
+}
+
+.gtl-scene-plotline.vis-item {
+  cursor: pointer;
+  opacity: 0.92;
+}
+
+.gtl-event.vis-item {
+  background-color: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.gtl-birth.vis-item {
+  background-color: var(--success, #3d7a4a);
+  border-color: var(--success, #3d7a4a);
+  color: #fff;
+  cursor: pointer;
+}
+
+.gtl-death.vis-item {
+  background-color: var(--text-muted);
+  border-color: var(--text-muted);
+  color: var(--bg);
+  cursor: pointer;
+}
+
+/* ── Add event button ── */
+.gtl-add-btn {
+  color: var(--accent);
+}

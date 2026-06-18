@@ -238,7 +238,18 @@ Followups:
 
 ## Slice 10: Global timeline
 
-Plotlines tab addition or standalone Anomalies-level tab showing all timeline events and scene dates on a single vis-timeline. Events can be filtered by character or faction.
+**Status: done** — 2026-06-18
+
+Global Timeline is now the first tab (default route). Shows all dated items (scenes, timeline events, character births, deaths) on a single vis-timeline. Full filter toolbar: kind toggles (Scenes/Events/Births/Deaths), status toggles (Draft/In progress/Complete), character/faction/plotline dropdown-chip pickers, date range inputs, "Add event" button, "Clear filters" link. Filter state persists via localStorage. Dataset refreshed in-place (no zoom reset) on filter change. `#main.gtl-main` modifier for full-height layout.
+
+Checkpoints:
+- CP1: Tab wired, router default changed to "timeline", vis-timeline with all items, click handlers (scene → scene page; birth/death → character sheet; event → edit dialog). Done.
+- CP2: Full filter toolbar integrated into global-timeline.js (no separate file needed). Done.
+
+Followups:
+- The "now" marker uses `meta.currentDate` but switching the date in the topbar won't update the marker unless the timeline is re-mounted. Wire `current-date-change` listener to move the custom time line (already stubbed in the mount function).
+- Toolbar dropdown options for characters/factions/plotlines are built at mount time; adding new entities in another tab won't update the dropdowns until re-navigation.
+- An "other characters" multi-picker in the event dialog is still deferred — characterIds beyond the first must be added via global timeline or JSON editing.
 
 ## Slice 11: Anomalies tab
 

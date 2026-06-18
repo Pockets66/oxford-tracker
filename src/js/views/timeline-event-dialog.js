@@ -13,7 +13,7 @@ export function openTimelineEventDialog(opts) {
 
   const isEdit = !!existingEvent;
   const ev = isEdit ? { ...existingEvent, characterIds: [...(existingEvent.characterIds ?? [])] } : createTimelineEvent();
-  if (!isEdit && !ev.characterIds.includes(characterId)) {
+  if (!isEdit && characterId != null && !ev.characterIds.includes(characterId)) {
     ev.characterIds = [characterId, ...ev.characterIds];
   }
 
@@ -116,7 +116,7 @@ export function openTimelineEventDialog(opts) {
     ev.date      = buildDateString();
     ev.updatedAt = new Date().toISOString();
 
-    if (!ev.characterIds.includes(characterId)) {
+    if (characterId != null && !ev.characterIds.includes(characterId)) {
       ev.characterIds = [characterId, ...ev.characterIds];
     }
 

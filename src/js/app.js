@@ -10,10 +10,12 @@ import { mountScenePage } from "./views/scene-page.js";
 import { mountPlotlines } from "./views/plotlines.js";
 import { mountSecrets } from "./views/secrets.js";
 import { mountSecretPage } from "./views/secret-page.js";
+import { mountGlobalTimeline } from "./views/global-timeline.js";
 import { migrateCharacters, migrateNamesToV3, migrateToV4 } from "./schema.js";
 import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
 const TABS = [
+  { id: "timeline",   label: "Timeline" },
   { id: "characters", label: "Characters" },
   { id: "scenes",     label: "Scenes" },
   { id: "plotlines",  label: "Plotlines" },
@@ -33,6 +35,11 @@ let appData = null;
 function mountView(tab, id) {
   const main = qs("#main");
   clear(main);
+
+  if (tab === "timeline") {
+    mountGlobalTimeline(main, appData);
+    return;
+  }
 
   if (tab === "characters") {
     if (id) {

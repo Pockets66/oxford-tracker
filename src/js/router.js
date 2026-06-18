@@ -1,10 +1,10 @@
-const TABS = ["characters", "scenes", "plotlines", "factions", "secrets", "anomalies"];
+const TABS = ["timeline", "characters", "scenes", "plotlines", "factions", "secrets", "anomalies"];
 
 function parsePath() {
   const hash = location.hash.replace(/^#\/?/, "");
   const parts = hash.split("/").filter(Boolean);
   return {
-    tab: parts[0] || "characters",
+    tab: parts[0] || "timeline",
     id: parts[1] || null,
   };
 }
@@ -24,7 +24,7 @@ window.addEventListener("hashchange", () => {
 // Fire on first load so app boots into the right state.
 export function initRouter() {
   if (!location.hash) {
-    location.hash = "/characters";
+    location.hash = "/timeline";
   }
   window.dispatchEvent(new CustomEvent("route-change", { detail: parsePath() }));
 }
