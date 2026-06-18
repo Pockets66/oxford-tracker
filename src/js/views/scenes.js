@@ -1,10 +1,16 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { createScene } from "../schema.js";
+import { createScene, displayName } from "../schema.js";
 import { formatFlexibleDate } from "../dates.js";
 
 const SCENE_STATUSES = ["Draft", "In progress", "Complete"];
+const STATUS_SLUG = {
+  "Draft": "draft",
+  "In progress": "in-progress",
+  "Complete": "complete",
+};
+const PERSIST_KEY = "oxford-filters-scenes";
 
 function chipTextColor(hex) {
   if (!hex || hex.length < 7) return "#f4ecd8";
@@ -13,35 +19,58 @@ function chipTextColor(hex) {
   const b = parseInt(hex.slice(5, 7), 16);
   return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.6 ? "#2a1f15" : "#f4ecd8";
 }
-const STATUS_SLUG = {
-  "Draft": "draft",
-  "In progress": "in-progress",
-  "Complete": "complete",
-};
-const PERSIST_KEY = "oxford-filters-scenes";
+
+function defaultState() {
+  return { search: "", statuses: [...SCENE_STATUSES], factions: [], characters: [] };
+}
 
 function loadState() {
   try {
     const saved = JSON.parse(localStorage.getItem(PERSIST_KEY) || "null");
     if (saved) {
       return {
-        search: saved.search ?? "",
-        statuses: saved.statuses ?? [...SCENE_STATUSES],
+        search:     saved.search     ?? "",
+        statuses:   Array.isArray(saved.statuses)   ? saved.statuses   : [...SCENE_STATUSES],
+        factions:   Array.isArray(saved.factions)   ? saved.factions   : [],
+        characters: Array.isArray(saved.characters) ? saved.characters : [],
       };
     }
   } catch {}
-  return { search: "", statuses: [...SCENE_STATUSES] };
+  return defaultState();
 }
 
 function persistState(state) {
   try { localStorage.setItem(PERSIST_KEY, JSON.stringify(state)); } catch {}
 }
 
+function isModified(state) {
+  return state.search !== ""
+    || state.statuses.length < SCENE_STATUSES.length
+    || state.factions.length > 0
+    || state.characters.length > 0;
+}
+
 function applyFilters(scenes, state) {
   let result = scenes;
+
   if (state.statuses.length < SCENE_STATUSES.length) {
-    result = result.filter(s => state.statuses.includes(s.status));
+    result = result.filter(s => state.statuses.includes(s.status ?? "Draft"));
   }
+
+  if (state.factions.length) {
+    result = result.filter(s =>
+      state.factions.some(fId => (s.factionIds ?? []).includes(fId))
+    );
+  }
+
+  if (state.characters.length) {
+    result = result.filter(s =>
+      state.characters.some(cId =>
+        (s.characters ?? []).some(sc => sc.characterId === cId)
+      )
+    );
+  }
+
   if (state.search) {
     const q = state.search.toLowerCase();
     result = result.filter(s =>
@@ -52,6 +81,7 @@ function applyFilters(scenes, state) {
       (s.goals      || "").toLowerCase().includes(q)
     );
   }
+
   return result;
 }
 
@@ -62,25 +92,13 @@ function renderCard(scene, appData) {
   const dateStr = scene.sceneDate ? formatFlexibleDate(scene.sceneDate) : "";
   const metaStr = [dateStr, scene.location].filter(Boolean).join(" · ");
 
-  const charCount = (scene.characters ?? []).length;
-
-  // Faction chips
+  const charCount    = (scene.characters ?? []).length;
   const factionChips = (scene.factionIds ?? []).map(fid => {
-    const f = appData.factions.find(x => x.id === fid);
+    const f    = appData.factions.find(x => x.id === fid);
     const chip = el("span", { class: "scene-card-faction-chip" }, [f ? f.name : fid]);
-    if (f?.color) {
-      chip.style.background = f.color;
-      chip.style.color = chipTextColor(f.color);
-    }
+    if (f?.color) { chip.style.background = f.color; chip.style.color = chipTextColor(f.color); }
     return chip;
   });
-
-  const footer = el("div", { class: "scene-card-footer" }, [
-    ...factionChips,
-    el("span", { class: "scene-card-count" }, [
-      `${charCount} character${charCount !== 1 ? "s" : ""}`,
-    ]),
-  ]);
 
   const card = el("article", { class: "scene-card" }, [
     el("div", { class: "scene-card-header" }, [
@@ -89,7 +107,10 @@ function renderCard(scene, appData) {
     ]),
     metaStr ? el("p", { class: "scene-card-meta" }, [metaStr]) : null,
     scene.summary ? el("p", { class: "scene-card-summary" }, [scene.summary]) : null,
-    footer,
+    el("div", { class: "scene-card-footer" }, [
+      ...factionChips,
+      el("span", { class: "scene-card-count" }, [`${charCount} character${charCount !== 1 ? "s" : ""}`]),
+    ]),
   ].filter(Boolean));
 
   card.addEventListener("click", () => navigate(`scenes/${scene.id}`));
@@ -107,71 +128,7 @@ export function mountScenes(container, appData) {
     navigate(`scenes/${scene.id}`);
   }
 
-  // ── Status toggle chips ──
-  const statusBtns = SCENE_STATUSES.map(status => {
-    const slug = STATUS_SLUG[status];
-    const btn  = el("button", { class: "scene-status-toggle" }, [status]);
-
-    function sync() {
-      const on = state.statuses.includes(status);
-      btn.classList.toggle("is-active", on);
-      btn.dataset.status = on ? slug : "";
-    }
-    sync();
-
-    btn.addEventListener("click", () => {
-      if (state.statuses.includes(status)) {
-        if (state.statuses.length === 1) return;
-        state.statuses = state.statuses.filter(x => x !== status);
-      } else {
-        state.statuses = [...state.statuses, status];
-      }
-      sync();
-      persistState(state);
-      renderGrid();
-    });
-
-    return btn;
-  });
-
-  // ── Search ──
-  const searchInput = el("input", { type: "text", class: "filter-search", placeholder: "Search scenes…" });
-  searchInput.value = state.search;
-  searchInput.addEventListener("input", () => {
-    state.search = searchInput.value;
-    persistState(state);
-    renderGrid();
-    updateClearBtn();
-  });
-
-  function isModified() {
-    return state.search !== "" || state.statuses.length < SCENE_STATUSES.length;
-  }
-
-  const clearBtn = el("button", { class: "filter-clear-btn" }, ["Clear filters"]);
-  clearBtn.addEventListener("click", () => {
-    state = { search: "", statuses: [...SCENE_STATUSES] };
-    searchInput.value = "";
-    statusBtns.forEach((btn, i) => {
-      btn.classList.add("is-active");
-      btn.dataset.status = STATUS_SLUG[SCENE_STATUSES[i]];
-    });
-    persistState(state);
-    renderGrid();
-    updateClearBtn();
-  });
-
-  function updateClearBtn() {
-    clearBtn.style.display = isModified() ? "" : "none";
-  }
-  updateClearBtn();
-
-  const filterBar = el("div", { class: "filter-bar" }, [
-    searchInput,
-    el("div", { class: "scene-status-toggles" }, statusBtns),
-    clearBtn,
-  ]);
-
+  // ── Grid ──
   const grid = el("div", { class: "scene-grid" });
 
   function renderGrid() {
@@ -184,13 +141,159 @@ export function mountScenes(container, appData) {
     }
   }
 
+  function onChange() {
+    persistState(state);
+    clearBtn.style.display = isModified(state) ? "" : "none";
+    renderGrid();
+  }
+
+  // ── Status toggle chips ──
+  const statusBtns = SCENE_STATUSES.map(status => {
+    const slug = STATUS_SLUG[status];
+    const btn  = el("button", { class: "scene-status-toggle" }, [status]);
+
+    function syncBtn() {
+      const on = state.statuses.includes(status);
+      btn.classList.toggle("is-active", on);
+      btn.dataset.status = on ? slug : "";
+    }
+    syncBtn();
+
+    btn.addEventListener("click", () => {
+      if (state.statuses.includes(status)) {
+        if (state.statuses.length === 1) return;
+        state.statuses = state.statuses.filter(x => x !== status);
+      } else {
+        state.statuses = [...state.statuses, status];
+      }
+      syncBtn();
+      onChange();
+    });
+
+    return { btn, syncBtn };
+  });
+
+  // ── Search ──
+  const searchInput = el("input", { type: "text", class: "filter-search", placeholder: "Search scenes…" });
+  searchInput.value = state.search;
+  searchInput.addEventListener("input", () => { state.search = searchInput.value; onChange(); });
+
+  // ── Faction filter ──
+  const factionChipsEl = el("div", { class: "filter-faction-chips" });
+
+  function renderFactionChips() {
+    clear(factionChipsEl);
+    for (const fId of state.factions) {
+      const f    = (appData.factions ?? []).find(x => x.id === fId);
+      const chip = el("span", { class: "filter-faction-active-chip" }, [
+        f?.name ?? fId,
+        el("button", { class: "filter-faction-chip-remove", onclick: () => {
+          state.factions = state.factions.filter(id => id !== fId);
+          renderFactionChips();
+          onChange();
+        }}, ["×"]),
+      ]);
+      if (f?.color) { chip.style.background = f.color; chip.style.color = chipTextColor(f.color); }
+      factionChipsEl.append(chip);
+    }
+  }
+
+  const factionSelect = el("select", { class: "filter-faction-select" });
+  factionSelect.append(el("option", { value: "" }, ["Filter by faction…"]));
+  for (const f of [...(appData.factions ?? [])].sort((a, b) => a.name.localeCompare(b.name))) {
+    factionSelect.append(el("option", { value: f.id }, [f.name]));
+  }
+  factionSelect.addEventListener("change", () => {
+    const val = factionSelect.value;
+    if (!val || state.factions.includes(val)) { factionSelect.value = ""; return; }
+    state.factions = [...state.factions, val];
+    factionSelect.value = "";
+    renderFactionChips();
+    onChange();
+  });
+  renderFactionChips();
+
+  // ── Character filter ──
+  const charChipsEl = el("div", { class: "filter-faction-chips" });
+
+  function renderCharChips() {
+    clear(charChipsEl);
+    for (const cId of state.characters) {
+      const c = (appData.characters ?? []).find(x => x.id === cId);
+      charChipsEl.append(el("span", { class: "filter-faction-active-chip" }, [
+        c ? displayName(c) : cId,
+        el("button", { class: "filter-faction-chip-remove", onclick: () => {
+          state.characters = state.characters.filter(id => id !== cId);
+          renderCharChips();
+          onChange();
+        }}, ["×"]),
+      ]));
+    }
+  }
+
+  const charSelect = el("select", { class: "filter-faction-select" });
+  charSelect.append(el("option", { value: "" }, ["Filter by character…"]));
+  for (const c of [...(appData.characters ?? [])].sort((a, b) => displayName(a).localeCompare(displayName(b)))) {
+    charSelect.append(el("option", { value: c.id }, [displayName(c)]));
+  }
+  charSelect.addEventListener("change", () => {
+    const val = charSelect.value;
+    if (!val || state.characters.includes(val)) { charSelect.value = ""; return; }
+    state.characters = [...state.characters, val];
+    charSelect.value = "";
+    renderCharChips();
+    onChange();
+  });
+  renderCharChips();
+
+  // ── Popover ──
+  const popover = el("div", { class: "filter-popover" });
+  popover.append(
+    el("div", { class: "filter-popover-row" }, [
+      el("span", { class: "filter-popover-label" }, ["Faction"]),
+      el("div", { class: "filter-faction-wrap" }, [factionSelect, factionChipsEl]),
+    ]),
+    el("div", { class: "filter-popover-row" }, [
+      el("span", { class: "filter-popover-label" }, ["Character"]),
+      el("div", { class: "filter-faction-wrap" }, [charSelect, charChipsEl]),
+    ]),
+  );
+
+  const filterByBtn = el("button", { class: "btn-small filter-by-btn" }, ["Filter by ▾"]);
+  filterByBtn.addEventListener("click", () => {
+    const open = popover.classList.toggle("is-open");
+    filterByBtn.classList.toggle("is-active", open);
+    filterByBtn.textContent = open ? "Filter by ▴" : "Filter by ▾";
+  });
+
+  // ── Clear ──
+  const clearBtn = el("button", { class: "btn-link filter-clear-btn" }, ["Clear filters"]);
+  clearBtn.style.display = isModified(state) ? "" : "none";
+  clearBtn.addEventListener("click", () => {
+    state = defaultState();
+    searchInput.value = "";
+    statusBtns.forEach(({ syncBtn }) => syncBtn());
+    renderFactionChips();
+    renderCharChips();
+    try { localStorage.removeItem(PERSIST_KEY); } catch {}
+    clearBtn.style.display = "none";
+    renderGrid();
+  });
+
+  const inlineBar = el("div", { class: "filter-inline-bar" }, [
+    searchInput,
+    el("div", { class: "scene-status-toggles" }, statusBtns.map(x => x.btn)),
+    clearBtn,
+    filterByBtn,
+  ]);
+
   renderGrid();
 
   container.append(
     el("div", { class: "scenes-toolbar" }, [
       el("button", { class: "btn-primary", onclick: handleNew }, ["New scene"]),
     ]),
-    filterBar,
-    grid,
+    inlineBar,
+    el("div", { class: "scenes-body" }, [grid, popover]),
   );
 }

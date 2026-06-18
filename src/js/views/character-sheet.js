@@ -5,7 +5,7 @@ import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS } from 
 import { sunSignFromDate } from "../zodiac.js";
 import { openRelationshipDialog } from "./relationship-dialog.js";
 import { createCombobox } from "../components/combobox.js";
-import { formatLongDate } from "../dates.js";
+import { formatLongDate, flexibleDateSortKey } from "../dates.js";
 
 const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
 const SIGNS  = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
@@ -139,6 +139,14 @@ function renderPrintedSheet(container, character, appData, onEdit) {
   const secretsKnown = (appData.secrets ?? []).filter(s => !s.archived && (s.knownToIds ?? []).includes(character.id));
   const hiddenFrom  = (appData.secrets ?? []).filter(s => !s.archived && (s.hiddenFromIds ?? []).includes(character.id));
 
+  const scenes = [...(appData.scenes ?? [])]
+    .filter(s => (s.characters ?? []).some(sc => sc.characterId === character.id))
+    .sort((a, b) => {
+      const ka = flexibleDateSortKey(a.sceneDate) || a.createdAt || "";
+      const kb = flexibleDateSortKey(b.sceneDate) || b.createdAt || "";
+      return kb.localeCompare(ka); // most recent first
+    });
+
   function psection(title, ...nodes) {
     const kids = nodes.filter(Boolean);
     if (!kids.length) return null;
@@ -242,6 +250,16 @@ function renderPrintedSheet(container, character, appData, onEdit) {
       el("ul", { class: "printed-secret-list" }, hiddenFrom.map(s =>
         el("li", {}, [el("a", { href: `#/secrets/${s.id}` }, [s.title || "(untitled)"])])
       ))
+    ) : null,
+
+    scenes.length ? psection("Scenes",
+      el("ul", { class: "printed-scene-list" }, scenes.map(s => {
+        const sc = (s.characters ?? []).find(x => x.characterId === character.id);
+        return el("li", {}, [
+          el("a", { href: `#/scenes/${s.id}` }, [s.title || "(untitled)"]),
+          sc?.role ? el("span", { class: "printed-scene-role" }, [` — ${sc.role}`]) : null,
+        ]);
+      }))
     ) : null,
 
     relsSorted.length ? psection("Relationships",

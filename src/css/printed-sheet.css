@@ -208,6 +208,36 @@
   text-decoration: underline;
 }
 
+/* ── Scene list (same visual as secret list) ── */
+.printed-scene-list {
+  list-style: disc;
+  margin: 0;
+  padding-left: 1.25rem;
+}
+
+.printed-scene-list li {
+  margin-bottom: 0.2rem;
+}
+
+.printed-scene-list a {
+  color: var(--accent);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  text-decoration: none;
+  transition: color 0.12s;
+}
+
+.printed-scene-list a:hover {
+  text-decoration: underline;
+}
+
+.printed-scene-role {
+  color: var(--text-muted);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  font-style: italic;
+}
+
 /* ── Relationship rows ── */
 .printed-rels {
   display: flex;

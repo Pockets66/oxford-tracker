@@ -184,13 +184,17 @@ Followups:
 
 Scenes tab with card preview grid and per scene page. Fields: title, summary, body, status (draft, in progress, complete), **story beats** (what needs to happen, free text or list), **goals** (what we want out of this scene), attached plotlines (chosen later), characters with role per character (Key Actor, Observer, Background). Character add control uses a smart dropdown: if the scene has a faction attached, prioritize that faction's members. Otherwise prioritize characters who already know other characters in the scene (via the relationships graph).
 
-Filter bar from `filters.js`:
+**Status: done** — 2026-06-18
 
-- Text search across title, summary, body, story beats, goals
-- Included characters facet, multi select (matches any character attached in any role)
-- Included actors facet, multi select with Bree, Jack, Nicole, Caiden, NPC (matches scenes containing any character owned by that actor)
-- Status facet
-- Attached plotline facet (populated in slice 8)
+Checkpoints:
+- CP1: Schema (createScene, SCENE_STATUSES, SCENE_ROLES), date helpers (parseFlexibleDate, formatFlexibleDate, flexibleDateSortKey), scene overview with text search + status toggle chips, scene page with all basic fields (title, status, date month+day, location, story beats, goals, summary, body, notes, delete). Routes wired.
+- CP2: Factions picker (combobox + chips) and characters picker (smart-sorted combobox with priority-tier dividers + role select + row list with inline role edit). Overview cards show faction chips. Combobox updated with presorted + divider item support.
+- CP3: Filter bar gains "Filter by ▾" popover with faction dropdown-chip and character dropdown-chip. Character sheet printed view gains a "Scenes" section (linked titles + role, most recent first). ROADMAP updated.
+
+Followups:
+- plotlineIds on scenes populated in Slice 8 (Plotlines).
+- Actor filter (filter by owner of characters in the scene) deferred — straightforward addition in a later pass.
+- Scene cards on the overview are not reactive within a session; re-mounting the view always reflects latest data.
 
 ## Slice 8: Plotlines with timeline
 

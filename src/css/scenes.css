@@ -49,6 +49,18 @@
 .scene-status-toggle.is-active[data-status="in-progress"]  { background: var(--scene-in-progress); color: #fff;        border-color: var(--scene-in-progress); }
 .scene-status-toggle.is-active[data-status="complete"]     { background: var(--scene-complete);    color: var(--text); border-color: var(--scene-complete); }
 
+/* ── Body (grid + popover side by side) ── */
+.scenes-body {
+  align-items: start;
+  display: flex;
+  gap: 1.25rem;
+}
+
+.scenes-body .scene-grid {
+  flex: 1;
+  min-width: 0;
+}
+
 /* ── Scene card grid ── */
 .scene-grid {
   display: grid;
