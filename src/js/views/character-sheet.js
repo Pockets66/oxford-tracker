@@ -341,6 +341,51 @@ function renderFactionsRelsRO(ch, appData, onRelsChange) {
 
   parts.push(buildRelsEl(ch, appData, onRelsChange));
 
+  // ── Incoming relationships ─────────────────────────────────────────────────
+  const incoming = (appData.relationships ?? [])
+    .filter(r => r.to === ch.id)
+    .sort((a, b) => {
+      const ao = appData.characters.find(c => c.id === a.from);
+      const bo = appData.characters.find(c => c.id === b.from);
+      const ad = ao?.deceased ? 1 : 0;
+      const bd = bo?.deceased ? 1 : 0;
+      if (ad !== bd) return ad - bd;
+      const ai = RELATIONSHIP_BANDS.indexOf(a.band ?? "Neutral");
+      const bi = RELATIONSHIP_BANDS.indexOf(b.band ?? "Neutral");
+      if (bi !== ai) return bi - ai;
+      return displayName(ao ?? {}).localeCompare(displayName(bo ?? {}));
+    });
+
+  parts.push(el("div", { class: "sc-incoming-rule" }));
+  parts.push(el("p", { class: "sc-sublabel sc-incoming-label" }, ["Incoming"]));
+
+  if (!incoming.length) {
+    parts.push(el("p", { class: "sheet-empty-note sc-incoming-empty" }, [
+      "No one has this character in their list.",
+    ]));
+  } else {
+    const incomingList = el("div", { class: "rels-list" });
+    for (const rel of incoming) {
+      const other  = appData.characters.find(c => c.id === rel.from);
+      const frozen = !!other?.deceased;
+      const band   = rel.band ?? "Neutral";
+      const links  = (rel.links ?? []).join(", ");
+
+      const mainLine = el("div", { class: "rel-row-main" }, [
+        el("a", { class: "rel-other-name", href: `#/characters/${rel.from}` },
+          [other ? displayName(other) : "Unknown"]),
+        links ? el("span", { class: "rel-type" }, [` — ${links} · `]) : el("span", { class: "rel-type" }, [" · "]),
+        el("em", { class: "rel-band", style: `color: ${BAND_COLOR[band] ?? "var(--text-muted)"}` }, [band]),
+      ]);
+
+      incomingList.append(el("div", {
+        class: "rel-row" + (frozen ? " rel-row--frozen" : ""),
+        title: frozen ? "This character is deceased." : "",
+      }, [mainLine]));
+    }
+    parts.push(incomingList);
+  }
+
   return el("div", { class: "sc-body" }, parts);
 }
 

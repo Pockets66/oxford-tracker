@@ -289,6 +289,30 @@
   width: 100%;
 }
 
+/* ── Incoming relationships section ── */
+.sc-incoming-rule {
+  border-top: 1px solid var(--border);
+  margin: 0.5rem 0 0.25rem;
+  opacity: 0.5;
+}
+
+.sc-incoming-label {
+  margin: 0 0 0.15rem;
+}
+
+.sc-incoming-empty {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-style: italic;
+  margin: 0 0 0.25rem;
+}
+
+/* ── Band color on rel rows ── */
+.rel-band {
+  font-size: 0.88rem;
+  flex-shrink: 0;
+}
+
 /* ── Relationship section button group ── */
 .sc-rels-btns {
   display: flex;

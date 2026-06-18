@@ -251,7 +251,21 @@ Followups:
 - Toolbar dropdown options for characters/factions/plotlines are built at mount time; adding new entities in another tab won't update the dropdowns until re-navigation.
 - An "other characters" multi-picker in the event dialog is still deferred — characterIds beyond the first must be added via global timeline or JSON editing.
 
-## Slice 11: Anomalies tab
+## Slice 11: Relationships rework — bands, links, bulk dialog
+
+**Status: done** — 2026-06-18
+
+Checkpoints:
+- CP1: Schema rework. Replaced `structuralType/socialLabels/platonic/romantic` with `band` (one of 7 RELATIONSHIP_BANDS: Nemesis → Inseparable) and `links[]` (multi-select from RELATIONSHIP_LINKS grouped by category). Deleted old `relationship-dialog.js` and `migrateRelationships`. Relationship rows now show `Name — links · band` with band colored by valence. Sort: band descending within living/deceased groups. Relationship web edges label with band; tooltip shows links + notes. + Add button stubbed pending CP2. Done.
+- CP2: Bulk dialog (`relationship-bulk-dialog.js`). Add mode: filter candidates (search + owner chips + faction), select multiple, apply band/links/notes at once; optional reciprocal section. Edit mode: shows existing rels, bulk-updates or removes selected. Band slider: 7 segments, keyboard left/right. Link checkboxes: grouped by category, collapsible. Two-pane layout (80vw, stacks below 1100px). Character sheet wires Edit + Add via lazy import. Done.
+- CP3: Incoming relationships panel on character sheet (read-only, below outgoing list, separated by gold-soft rule + "Incoming" label). Band/links display + same sort order. Empty state message. CSS polish (`.rel-band`, incoming section styles). Done.
+
+Followups:
+- `removeRel` still uses `confirm()` which doesn't work in Electron sandboxed renderer; inline confirmation should replace it in a later pass.
+- Link checkboxes start closed; a "show all" / search within links would help for the Work category which is long.
+- The "Other characters involved" multi-picker in the event dialog is still deferred.
+
+## Slice 12: Anomalies tab
 
 Foley's Book of Anomalies. Overview cards plus per anomaly page. Fields: name, Primary P with level, Secondary Ps with levels (multiple), lore, related characters, related scenes. Sub-tabs across the top organized by P. Schema lets us add more Ps later without code changes.
 
