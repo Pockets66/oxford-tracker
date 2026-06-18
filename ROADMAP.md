@@ -207,9 +207,14 @@ Checkpoints:
 - CP2: vis-timeline visualization above reorder list. Items shown in pl.items array order with ↑/↓ buttons. Timeline click → navigate scene or open event-edit dialog. Campaign "now" marker via addCustomTime; tracks current-date-change event. Teardown on re-render. Fixed: autoresize deferred via requestAnimationFrame so textareas size correctly on load.
 - CP3: Progress bar (filled by plotline color) and "X of Y items complete" label in detail pane; mini progress bar per plotline in sidebar list. Secrets tab gains "Secret Plotlines" section at top with cards for isSecret plotlines linking to their detail. Character sheet printed view "Current Plots" section shows plotlines the character appears in (via characterIds or via attached scenes).
 
-## Slice 8: Plotlines with timeline
+## Slice 8: Two-column printed sheet with per-card inline editing
 
-Plotlines tab with sub-tab per plotline. Each plotline shows a vis-timeline. Scenes and standalone events sit on the timeline and can be dragged to reorder. Each item has a complete toggle. A progress indicator at the top of the plotline fills as items complete. Scenes on the timeline are click through to the scene page.
+Replace the single-column printed view + giant edit modal with a two-column card layout where each card has its own pencil icon and edits inline. Left column (60%): Identity, button row, Summary, Background. Right column (40%): Zodiac, Languages, Skills, Factions & Relationships, Current. Button row has three action buttons: Relationships (wired), Factions (disabled, Slice 9), Timeline (disabled, Slice 9). Schema: LANGUAGE_LEVELS gains "Advanced"; new characters default to English (Native).
+
+Checkpoints:
+- CP1: Schema edits, two-column card layout (all read-only), old edit modal removed, Relationships button wired. **Done — 2026-06-18.**
+- CP2: Per-card pencil icons, inline edit forms, "Done" button / Escape, one card open at a time, debounced autosave.
+- CP3: Zodiac expander, language tier sorting, Current card three subsections, final visual pass. ROADMAP updated.
 
 ## Slice 9: Cross linking pass
 

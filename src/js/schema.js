@@ -3,7 +3,7 @@ const FACTION_PALETTE = [
   "#5b8a9a", "#8a9a5b", "#9a5b8a", "#6b8a6b", "#7a6b9a",
 ];
 
-export const LANGUAGE_LEVELS = ["Broken", "Accented", "Native"];
+export const LANGUAGE_LEVELS = ["Broken", "Accented", "Advanced", "Native"];
 
 export const STATUS_TIERS = [
   { name: "Redacted",         minKnown: 0,  maxKnown: 1  },
@@ -104,7 +104,7 @@ export function createCharacter() {
     age: null,
     birthday: null,
     placeOfBirth: "",
-    languages: [],
+    languages: [{ name: "English", level: "Native" }],
     deathDate: null,
     zodiac: { sun: null, moon: null, rising: null },
     owner: "NPC",
