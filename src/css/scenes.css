@@ -1,0 +1,281 @@
+/* ── Scene status chip colors ── */
+:root {
+  --scene-draft:        #d9cea4;
+  --scene-in-progress:  #002147;
+  --scene-complete:     #b8860b;
+}
+
+.scene-status-chip {
+  display: inline-block;
+  flex-shrink: 0;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  padding: 0.15rem 0.5rem;
+  text-transform: uppercase;
+}
+.scene-status-chip--draft        { background: var(--scene-draft);       color: var(--text); }
+.scene-status-chip--in-progress  { background: var(--scene-in-progress); color: #fff; }
+.scene-status-chip--complete     { background: var(--scene-complete);    color: var(--text); }
+
+/* ── Scenes overview toolbar ── */
+.scenes-toolbar {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+  align-items: center;
+}
+
+/* ── Status toggle chips in filter bar ── */
+.scene-status-toggles {
+  display: flex;
+  gap: 0.35rem;
+}
+
+.scene-status-toggle {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  cursor: pointer;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.6rem;
+  text-transform: uppercase;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.scene-status-toggle.is-active[data-status="draft"]        { background: var(--scene-draft);       color: var(--text); border-color: var(--scene-draft); }
+.scene-status-toggle.is-active[data-status="in-progress"]  { background: var(--scene-in-progress); color: #fff;        border-color: var(--scene-in-progress); }
+.scene-status-toggle.is-active[data-status="complete"]     { background: var(--scene-complete);    color: var(--text); border-color: var(--scene-complete); }
+
+/* ── Scene card grid ── */
+.scene-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  padding: 1rem 0;
+}
+
+.scene-empty {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 2rem 0;
+}
+
+/* ── Scene card ── */
+.scene-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 1rem;
+  transition: border-color 0.15s;
+}
+
+.scene-card:hover {
+  border-color: var(--gold);
+}
+
+.scene-card-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 0.5rem;
+  justify-content: space-between;
+  margin-bottom: 0.35rem;
+}
+
+.scene-card-title {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
+.scene-card-meta {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+  margin: 0 0 0.4rem;
+}
+
+.scene-card-summary {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--text);
+  display: -webkit-box;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  margin: 0 0 0.5rem;
+  overflow: hidden;
+}
+
+.scene-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  align-items: center;
+}
+
+.scene-card-count {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.75rem;
+  margin-left: auto;
+}
+
+/* ── Scene page ── */
+.scene-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 3rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.scene-page-header {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.scene-page-title-input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.8rem;
+  font-weight: 500;
+  padding: 0.25rem 0;
+  width: 100%;
+}
+
+.scene-page-title-input:focus {
+  border-bottom-color: var(--gold);
+  outline: none;
+}
+
+.scene-page-header-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.scene-page-status-select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  padding: 0.3rem 0.5rem;
+  text-transform: uppercase;
+}
+
+.scene-page-meta-row {
+  display: flex;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.scene-page-date-wrap,
+.scene-page-location-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.scene-page-location-wrap {
+  flex: 1;
+}
+
+.scene-page-date-inputs {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.scene-page-month-input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.5rem;
+}
+
+.scene-page-day-select {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.3rem 0.4rem;
+  width: 4.5rem;
+}
+
+.scene-page-location-input {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.5rem;
+  width: 100%;
+}
+
+.scene-page-label {
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.scene-page-section {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.scene-page-textarea {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  overflow: hidden;
+  padding: 0.5rem 0.6rem;
+  resize: none;
+  width: 100%;
+}
+
+.scene-page-textarea:focus {
+  border-color: var(--gold-soft);
+  outline: none;
+}
+
+.scene-page-textarea--summary {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+  font-style: italic;
+}
+
+.scene-page-textarea--body {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+  line-height: 1.7;
+  min-height: 200px;
+}
+
+.scene-page-delete-row {
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+}

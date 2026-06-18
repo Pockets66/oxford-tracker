@@ -169,6 +169,30 @@ export function syncFactionMembership(characters, factions) {
   }
 }
 
+export const SCENE_STATUSES = ["Draft", "In progress", "Complete"];
+export const SCENE_ROLES    = ["Key Actor", "Observer", "Background"];
+
+export function createScene() {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    summary: "",
+    body: "",
+    storyBeats: "",
+    goals: "",
+    status: "Draft",
+    sceneDate: null,
+    location: "",
+    factionIds: [],
+    characters: [],
+    plotlineIds: [],
+    notes: "",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 // ── Migrations ───────────────────────────────────────────────────────────────
 
 // Migration v1→v2: old `sheet` shape → new `background` + `cards` shape.
