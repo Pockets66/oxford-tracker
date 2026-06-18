@@ -206,6 +206,28 @@ export function mountSecrets(container, appData) {
 
   renderGrid();
 
+  // ── Secret plotlines section ──
+  const secretPlotlines = (appData.plotlines ?? []).filter(pl => pl.isSecret);
+  if (secretPlotlines.length) {
+    const cards = secretPlotlines.map(pl => {
+      const card = el("div", { class: "secret-plotline-card" });
+      card.style.setProperty("--pl-color", pl.color ?? "#4a6b8a");
+      card.addEventListener("click", () => navigate(`plotlines/${pl.id}`));
+      card.append(
+        el("div", { class: "secret-plotline-color-bar" }),
+        el("div", { class: "secret-plotline-body" }, [
+          el("h3", { class: "secret-plotline-title" }, [pl.title || "Untitled"]),
+          pl.summary ? el("p", { class: "secret-plotline-summary" }, [pl.summary]) : null,
+        ].filter(Boolean)),
+      );
+      return card;
+    });
+    container.append(el("div", { class: "secret-plotlines-section" }, [
+      el("h2", { class: "secret-plotlines-heading" }, ["Secret Plotlines"]),
+      el("div", { class: "secret-plotlines-grid" }, cards),
+    ]));
+  }
+
   container.append(
     el("div", { class: "secrets-toolbar" }, [
       el("button", { class: "btn-primary", onclick: handleNew }, ["New secret"]),

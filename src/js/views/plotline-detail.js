@@ -2,7 +2,7 @@ import { el, clear } from "../dom.js";
 import { save } from "../storage.js";
 import { navigate } from "../router.js";
 import { displayName } from "../schema.js";
-import { formatFlexibleDate, parseFlexibleDate, flexibleDateSortKey } from "../dates.js";
+import { formatFlexibleDate, parseFlexibleDate } from "../dates.js";
 import { createCombobox } from "../components/combobox.js";
 
 function debounce(fn, ms) {
@@ -55,25 +55,26 @@ function makeDateInputs(existingDate) {
   return { monthInput, daySelect, getValue: () => parseDateInput(monthInput.value, daySelect.value) };
 }
 
-// ── Item sort helpers ──────────────────────────────────────────────────────
+// ── Item helpers ───────────────────────────────────────────────────────────
 
-function itemSortKey(item, scenes) {
-  if (item.kind === "scene") {
-    const s = (scenes ?? []).find(x => x.id === item.sceneId);
-    return flexibleDateSortKey(s?.sceneDate) || s?.createdAt?.slice(0, 10) || "";
-  }
-  return flexibleDateSortKey(item.date) || "";
+function escapeHtml(s) {
+  return (s ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
-function sortItems(items, scenes) {
-  return [...(items ?? [])].sort((a, b) => {
-    const ka = itemSortKey(a, scenes);
-    const kb = itemSortKey(b, scenes);
-    if (!ka && !kb) return 0;
-    if (!ka) return 1;
-    if (!kb) return -1;
-    return ka.localeCompare(kb);
-  });
+function itemEffectiveParsedDate(item, scenes) {
+  if (item.kind === "scene") {
+    const s = (scenes ?? []).find(x => x.id === item.sceneId);
+    return s?.sceneDate ? parseFlexibleDate(s.sceneDate) : null;
+  }
+  return item.date ? parseFlexibleDate(item.date) : null;
+}
+
+function itemDisplayTitle(item, scenes) {
+  if (item.kind === "scene") {
+    const s = (scenes ?? []).find(x => x.id === item.sceneId);
+    return s?.title || "Untitled scene";
+  }
+  return item.title || "Untitled event";
 }
 
 // ── Main export ────────────────────────────────────────────────────────────
@@ -89,6 +90,31 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
     pl.updatedAt = new Date().toISOString();
     await save("plotlines", appData.plotlines);
     onUpdate();
+  }
+
+  let timelineTeardown = null;
+
+  // ── Progress indicator ─────────────────────────────────────────────────────
+
+  const progressEl = el("div", { class: "pl-progress-section" });
+
+  function renderProgress() {
+    clear(progressEl);
+    const total = (pl.items ?? []).length;
+    if (!total) return;
+    const done = (pl.items ?? []).filter(i => i.completed).length;
+    const pct  = Math.round((done / total) * 100);
+    progressEl.append(
+      el("p", { class: "pl-progress-label" }, [
+        `${done} of ${total} item${total !== 1 ? "s" : ""} complete`,
+      ]),
+      el("div", { class: "pl-progress-bar-wrap" }, [
+        el("div", {
+          class: "pl-progress-bar-fill",
+          style: `width: ${pct}%; background: ${pl.color ?? "#4a6b8a"};`,
+        }),
+      ]),
+    );
   }
 
   // ── Header row: title + color + secret ──
@@ -201,62 +227,70 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
   const itemsEl   = el("div", { class: "pl-items" });
   let showAddEvent = false;
 
-  function renderItemRow(item) {
+  function renderListRow(item, idx) {
+    const isFirst  = idx === 0;
+    const isLast   = idx === pl.items.length - 1;
+    const isDone   = !!item.completed;
+    const rowClass = "pl-item-row" + (isDone ? " pl-item-row--done" : "");
+
+    const upBtn = el("button", { class: "pl-reorder-btn", title: "Move up" }, ["↑"]);
+    if (isFirst) upBtn.disabled = true;
+    upBtn.addEventListener("click", () => {
+      [pl.items[idx - 1], pl.items[idx]] = [pl.items[idx], pl.items[idx - 1]];
+      persistNow().then(() => renderItems());
+    });
+
+    const downBtn = el("button", { class: "pl-reorder-btn", title: "Move down" }, ["↓"]);
+    if (isLast) downBtn.disabled = true;
+    downBtn.addEventListener("click", () => {
+      [pl.items[idx], pl.items[idx + 1]] = [pl.items[idx + 1], pl.items[idx]];
+      persistNow().then(() => renderItems());
+    });
+
+    const check = el("input", { type: "checkbox", class: "pl-item-check" });
+    check.checked = isDone;
+    check.addEventListener("change", () => { item.completed = check.checked; persistNow(); renderProgress(); });
+
     if (item.kind === "scene") {
-      return renderSceneItemRow(item);
-    }
-    return renderEventItemRow(item);
-  }
+      const scene   = (appData.scenes ?? []).find(s => s.id === item.sceneId);
+      const title   = scene ? (scene.title || "Untitled") : "(deleted scene)";
+      const dateStr = scene?.sceneDate ? formatFlexibleDate(scene.sceneDate) : null;
 
-  function renderSceneItemRow(item) {
-    const scene   = (appData.scenes ?? []).find(s => s.id === item.sceneId);
-    const title   = scene ? (scene.title || "Untitled") : "(deleted scene)";
-    const dateStr = scene?.sceneDate ? formatFlexibleDate(scene.sceneDate) : null;
+      const link = scene
+        ? el("a", { class: "pl-item-title pl-item-title--link", href: `#/scenes/${scene.id}` }, [title])
+        : el("span", { class: "pl-item-title pl-item-title--missing" }, [title]);
 
-    const check = el("input", { type: "checkbox", class: "pl-item-check" });
-    check.checked = !!item.completed;
-    check.addEventListener("change", () => { item.completed = check.checked; persistNow(); });
+      const removeBtn = el("button", { class: "pl-item-remove", onclick: () => {
+        pl.items = pl.items.filter(i => i.id !== item.id);
+        persistNow().then(() => renderItems());
+      }}, ["×"]);
 
-    const link = scene
-      ? el("a", { class: "pl-item-title pl-item-title--link", href: `#/scenes/${scene.id}` }, [title])
-      : el("span", { class: "pl-item-title pl-item-title--missing" }, [title]);
-
-    const removeBtn = el("button", { class: "pl-item-remove", onclick: () => {
-      pl.items = pl.items.filter(i => i.id !== item.id);
-      persistNow().then(renderItems);
-    }}, ["×"]);
-
-    return el("div", { class: "pl-item-row" + (item.completed ? " pl-item-row--done" : "") }, [
-      check,
-      el("span", { class: "pl-item-kind" }, ["S"]),
-      link,
-      dateStr ? el("span", { class: "pl-item-date" }, [dateStr]) : null,
-      removeBtn,
-    ].filter(Boolean));
-  }
-
-  function renderEventItemRow(item, editing = false) {
-    if (editing) {
-      return renderEventEditForm(item);
+      return el("div", { class: rowClass }, [
+        el("div", { class: "pl-reorder-btns" }, [upBtn, downBtn]),
+        check,
+        el("span", { class: "pl-item-kind" }, ["S"]),
+        link,
+        dateStr ? el("span", { class: "pl-item-date" }, [dateStr]) : null,
+        removeBtn,
+      ].filter(Boolean));
     }
 
-    const check = el("input", { type: "checkbox", class: "pl-item-check" });
-    check.checked = !!item.completed;
-    check.addEventListener("change", () => { item.completed = check.checked; persistNow(); });
-
+    // Event row
     const dateStr = item.date ? formatFlexibleDate(item.date) : null;
 
-    const editBtn = el("button", { class: "btn-small", onclick: () => {
+    const editBtn = el("button", { class: "btn-small" }, ["Edit"]);
+    editBtn.addEventListener("click", () => {
       const rowEl = editBtn.closest(".pl-item-row");
       rowEl.replaceWith(renderEventEditForm(item));
-    }}, ["Edit"]);
+    });
 
     const removeBtn = el("button", { class: "pl-item-remove", onclick: () => {
       pl.items = pl.items.filter(i => i.id !== item.id);
-      persistNow().then(renderItems);
+      persistNow().then(() => renderItems());
     }}, ["×"]);
 
-    return el("div", { class: "pl-item-row" + (item.completed ? " pl-item-row--done" : "") }, [
+    return el("div", { class: rowClass }, [
+      el("div", { class: "pl-reorder-btns" }, [upBtn, downBtn]),
       check,
       el("span", { class: "pl-item-kind" }, ["E"]),
       el("span", { class: "pl-item-title" }, [item.title || "(untitled event)"]),
@@ -264,6 +298,135 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
       editBtn,
       removeBtn,
     ].filter(Boolean));
+  }
+
+  function openEventEditDialog(item) {
+    const backdrop = el("div", { class: "dialog-backdrop" });
+    document.body.append(backdrop);
+
+    function close() {
+      backdrop.remove();
+      document.removeEventListener("keydown", onEsc);
+    }
+
+    function onEsc(e) { if (e.key === "Escape") close(); }
+    document.addEventListener("keydown", onEsc);
+    backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+
+    const titleInput2 = el("input", { type: "text", class: "pl-event-title-input", placeholder: "Event title…" });
+    titleInput2.value = item.title ?? "";
+
+    const { monthInput, daySelect, getValue: getDate } = makeDateInputs(item.date);
+    const bodyTa2 = el("textarea", { class: "pl-textarea pl-event-body", rows: "3", placeholder: "Details…" });
+    bodyTa2.value = item.body ?? "";
+
+    const saveBtn = el("button", { class: "btn-primary" }, ["Save"]);
+    saveBtn.addEventListener("click", () => {
+      item.title = titleInput2.value.trim();
+      item.date  = getDate();
+      item.body  = bodyTa2.value.trim();
+      persistNow().then(() => renderItems());
+      close();
+    });
+
+    backdrop.append(el("div", { class: "dialog" }, [
+      el("div", { class: "dialog-double-rule" }),
+      el("h2", { class: "dialog-title" }, ["Edit event"]),
+      el("div", { class: "dialog-double-rule" }),
+      el("div", { class: "dialog-body" }, [
+        el("div", { class: "dialog-field" }, [
+          el("span", { class: "dialog-field-label" }, ["Title"]),
+          titleInput2,
+        ]),
+        el("div", { class: "dialog-field" }, [
+          el("span", { class: "dialog-field-label" }, ["Date"]),
+          el("div", { class: "pl-date-inputs" }, [monthInput, daySelect]),
+        ]),
+        el("div", { class: "dialog-field" }, [
+          el("span", { class: "dialog-field-label" }, ["Details"]),
+          bodyTa2,
+        ]),
+      ]),
+      el("div", { class: "dialog-footer" }, [
+        saveBtn,
+        el("button", { class: "btn-secondary", onclick: close }, ["Cancel"]),
+      ]),
+    ]));
+  }
+
+  async function initTimeline(container) {
+    try {
+      const visModule = await import("../../vendor/vis-timeline.esm.min.js");
+      const Timeline  = visModule.Timeline;
+      const DataSet   = visModule.DataSet;
+
+      const tlItems = (pl.items ?? []).flatMap(item => {
+        const parsed = itemEffectiveParsedDate(item, appData.scenes);
+        if (!parsed) return [];
+        const start = new Date(parsed.year, parsed.month - 1, parsed.day ?? 1);
+        const title = escapeHtml(itemDisplayTitle(item, appData.scenes));
+        return [{
+          id:        item.id,
+          content:   title,
+          start,
+          className: item.completed ? "plotline-item--complete" : "plotline-item",
+          style:     `background-color: ${pl.color ?? "#4a6b8a"}; border-color: ${pl.color ?? "#4a6b8a"};`,
+          type:      "box",
+        }];
+      });
+
+      if (!tlItems.length) {
+        container.append(el("p", { class: "pl-timeline-empty" }, [
+          `No items with dates (${pl.items.length} item${pl.items.length !== 1 ? "s" : ""} in list, none with an effective date).`,
+        ]));
+        return () => {};
+      }
+
+      const dataset = new DataSet(tlItems);
+      const options = {
+        height:   "260px",
+        stack:    true,
+        editable: { add: false, updateTime: false, updateGroup: false, remove: false },
+        zoomable: true,
+        moveable: true,
+        showCurrentTime: false,
+        selectable: true,
+      };
+
+      const tl = new Timeline(container, dataset, options);
+
+      if (appData.meta?.currentDate) {
+        try { tl.addCustomTime(new Date(appData.meta.currentDate), "now"); } catch (_) {}
+      }
+
+      tl.on("click", props => {
+        if (!props.item) return;
+        const item = (pl.items ?? []).find(i => i.id === props.item);
+        if (!item) return;
+        if (item.kind === "scene") {
+          navigate(`scenes/${item.sceneId}`);
+        } else {
+          openEventEditDialog(item);
+        }
+      });
+
+      function onDateChange(e) {
+        if (!container.isConnected) {
+          window.removeEventListener("current-date-change", onDateChange);
+          return;
+        }
+        try { tl.setCustomTime(new Date(e.detail.date), "now"); } catch (_) {}
+      }
+      window.addEventListener("current-date-change", onDateChange);
+
+      return () => {
+        window.removeEventListener("current-date-change", onDateChange);
+        tl.destroy();
+      };
+    } catch (err) {
+      container.append(el("p", { class: "pl-timeline-error" }, [`Timeline unavailable: ${err.message}`]));
+      return () => {};
+    }
   }
 
   function renderEventEditForm(item) {
@@ -329,19 +492,26 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
   }
 
   function renderItems() {
+    if (timelineTeardown) { timelineTeardown(); timelineTeardown = null; }
     clear(itemsEl);
 
-    const sorted = sortItems(pl.items, appData.scenes);
+    // ── Timeline ──
+    const tlContainer = el("div", { class: "pl-timeline-container" });
+    itemsEl.append(tlContainer);
+    initTimeline(tlContainer).then(teardown => { timelineTeardown = teardown; });
 
-    if (sorted.length) {
+    // ── Reorder list (stored array order, ↑/↓ to rearrange) ──
+    if (pl.items.length) {
       const list = el("div", { class: "pl-items-list" });
-      for (const item of sorted) list.append(renderItemRow(item));
+      for (let i = 0; i < pl.items.length; i++) {
+        list.append(renderListRow(pl.items[i], i));
+      }
       itemsEl.append(list);
     } else {
       itemsEl.append(el("p", { class: "pl-empty-note" }, ["No items yet."]));
     }
 
-    // ── Add scene row ──
+    // ── Add controls ──
     const sceneAlready = new Set((pl.items ?? []).filter(i => i.kind === "scene").map(i => i.sceneId));
     const availableScenes = (appData.scenes ?? [])
       .filter(s => !sceneAlready.has(s.id))
@@ -358,7 +528,7 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
       if (!pendingSceneId) return;
       pl.items.push({ id: crypto.randomUUID(), kind: "scene", sceneId: pendingSceneId, completed: false });
       pendingSceneId = "";
-      persistNow().then(renderItems);
+      persistNow().then(() => renderItems());
     }}, ["Add"]);
 
     const addEventBtn = el("button", { class: "btn-small", onclick: () => {
@@ -372,6 +542,8 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
         showAddEvent ? renderAddEventForm() : addEventBtn,
       ]),
     );
+
+    renderProgress();
   }
 
   // ── Delete ──
@@ -403,6 +575,7 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
           el("label", { class: "pl-secret-label" }, [secretCheck, "Secret"]),
         ]),
       ]),
+      progressEl,
       el("div", { class: "pl-section" }, [sectionLabel("Summary"), summaryTa]),
       el("div", { class: "pl-section" }, [sectionLabel("Body"), bodyTa]),
       charSectionEl,
@@ -413,5 +586,7 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
     ]),
   );
 
-  for (const ta of [summaryTa, bodyTa, notesTa]) autoresize(ta);
+  requestAnimationFrame(() => {
+    for (const ta of [summaryTa, bodyTa, notesTa]) autoresize(ta);
+  });
 }

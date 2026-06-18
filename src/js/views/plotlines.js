@@ -33,12 +33,21 @@ export function mountPlotlines(container, appData, selectedId) {
       for (const pl of appData.plotlines) {
         const isSelected = pl.id === currentId;
         const prog       = progressLabel(pl);
+        const total      = (pl.items ?? []).length;
+        const done       = (pl.items ?? []).filter(i => i.completed).length;
+        const pct        = total ? Math.round((done / total) * 100) : 0;
+        const barEl      = total > 0
+          ? el("div", { class: "plotline-list-bar" }, [
+              el("div", { class: "plotline-list-bar-fill", style: `width: ${pct}%` }),
+            ])
+          : null;
         const item = el("div", {
           class: "plotline-list-item" + (isSelected ? " is-selected" : ""),
           "data-id": pl.id,
         }, [
           el("span", { class: "plotline-list-title" }, [pl.title || "Untitled"]),
           prog ? el("span", { class: "plotline-list-prog" }, [prog]) : null,
+          barEl,
         ].filter(Boolean));
         item.style.setProperty("--pl-color", pl.color ?? "#4a6b8a");
         item.addEventListener("click", () => selectPlotline(pl.id));

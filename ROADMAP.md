@@ -196,6 +196,17 @@ Followups:
 - Actor filter (filter by owner of characters in the scene) deferred — straightforward addition in a later pass.
 - Scene cards on the overview are not reactive within a session; re-mounting the view always reflects latest data.
 
+## Slice 7.5: Plotlines CRUD
+
+Plotlines tab with sidebar list + detail pane. Each plotline has title, color swatch, secret flag, summary, body, notes, character chips, faction chips, and an items list (scenes + standalone events). vis-timeline above the items list shows dated items at their effective date. Items reorder via ↑/↓ buttons. Clicking a scene item on the timeline navigates to it; clicking an event item opens an edit dialog.
+
+**Status: done** — 2026-06-18
+
+Checkpoints:
+- CP1: Schema (createPlotline), sidebar/detail layout, full plotline editor, character/faction chips, inline event forms, add-scene combobox. vis-timeline vendor files downloaded (vis-timeline@7.7.3 ESM + CSS).
+- CP2: vis-timeline visualization above reorder list. Items shown in pl.items array order with ↑/↓ buttons. Timeline click → navigate scene or open event-edit dialog. Campaign "now" marker via addCustomTime; tracks current-date-change event. Teardown on re-render. Fixed: autoresize deferred via requestAnimationFrame so textareas size correctly on load.
+- CP3: Progress bar (filled by plotline color) and "X of Y items complete" label in detail pane; mini progress bar per plotline in sidebar list. Secrets tab gains "Secret Plotlines" section at top with cards for isSecret plotlines linking to their detail. Character sheet printed view "Current Plots" section shows plotlines the character appears in (via characterIds or via attached scenes).
+
 ## Slice 8: Plotlines with timeline
 
 Plotlines tab with sub-tab per plotline. Each plotline shows a vis-timeline. Scenes and standalone events sit on the timeline and can be dragged to reorder. Each item has a complete toggle. A progress indicator at the top of the plotline fills as items complete. Scenes on the timeline are click through to the scene page.

@@ -147,6 +147,15 @@ function renderPrintedSheet(container, character, appData, onEdit) {
       return kb.localeCompare(ka); // most recent first
     });
 
+  const currentPlots = (appData.plotlines ?? []).filter(pl => {
+    if ((pl.characterIds ?? []).includes(character.id)) return true;
+    return (pl.items ?? []).some(item => {
+      if (item.kind !== "scene") return false;
+      const scene = (appData.scenes ?? []).find(s => s.id === item.sceneId);
+      return (scene?.characters ?? []).some(sc => sc.characterId === character.id);
+    });
+  });
+
   function psection(title, ...nodes) {
     const kids = nodes.filter(Boolean);
     if (!kids.length) return null;
@@ -260,6 +269,14 @@ function renderPrintedSheet(container, character, appData, onEdit) {
           sc?.role ? el("span", { class: "printed-scene-role" }, [` — ${sc.role}`]) : null,
         ]);
       }))
+    ) : null,
+
+    currentPlots.length ? psection("Current Plots",
+      el("ul", { class: "printed-scene-list" }, currentPlots.map(pl =>
+        el("li", {}, [
+          el("a", { href: `#/plotlines/${pl.id}` }, [pl.title || "Untitled plotline"]),
+        ])
+      ))
     ) : null,
 
     relsSorted.length ? psection("Relationships",
