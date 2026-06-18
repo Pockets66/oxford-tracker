@@ -502,22 +502,37 @@ function editIdentity(ch, appData, debouncedSave, persistNow, done) {
 }
 
 function editZodiac(ch, debouncedSave, done) {
-  const sun = ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
+  const sun       = ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
   const moonSel   = signSelect(ch.zodiac?.moon);
   const risingSel = signSelect(ch.zodiac?.rising);
 
   moonSel.addEventListener("change",   () => { ch.zodiac ??= {}; ch.zodiac.moon   = moonSel.value   || null; debouncedSave(); });
   risingSel.addEventListener("change", () => { ch.zodiac ??= {}; ch.zodiac.rising = risingSel.value || null; debouncedSave(); });
 
-  return el("div", { class: "sc-edit-form" }, [
+  const hasExtra  = !!(ch.zodiac?.moon || ch.zodiac?.rising);
+  const extraBody = el("div", { class: "sheet-astro-extra" }, [
     el("div", { class: "sheet-row" }, [
-      el("label", { class: "sheet-label" }, [
-        "Sun ☀",
-        el("span", { class: "sheet-sun-display" }, [sun ?? "—"]),
-      ]),
       el("label", { class: "sheet-label" }, ["Moon ☽", moonSel]),
       el("label", { class: "sheet-label" }, ["Rising ↑", risingSel]),
     ]),
+  ]);
+  extraBody.hidden = !hasExtra;
+
+  const toggleBtn = el("button", { class: "btn-link sheet-astro-toggle" }, [
+    hasExtra ? "▾ Astrological details" : "+ More astrological info",
+  ]);
+  toggleBtn.addEventListener("click", () => {
+    extraBody.hidden = !extraBody.hidden;
+    toggleBtn.textContent = extraBody.hidden ? "+ More astrological info" : "▾ Astrological details";
+  });
+
+  return el("div", { class: "sc-edit-form" }, [
+    el("label", { class: "sheet-label" }, [
+      "Sun ☀",
+      el("span", { class: "sheet-sun-display" }, [sun ?? "—"]),
+    ]),
+    toggleBtn,
+    extraBody,
     makeDoneBtn(done),
   ]);
 }
@@ -782,10 +797,12 @@ export function mountCharacterSheet(container, appData, id) {
     // Editable card factory — closed over cardState so only one card opens at a time.
     function makeEditCard(key, title, renderROFn, renderEditFn) {
       const bodyEl = el("div", { class: "sheet-card-body" });
+      const cardEl = el("section", { class: "sheet-card", "data-card": key });
       bodyEl.append(renderROFn());
 
       function doClose() {
         cardState.close = null;
+        cardEl.removeAttribute("data-editing");
         clear(bodyEl);
         bodyEl.append(renderROFn());
       }
@@ -793,6 +810,7 @@ export function mountCharacterSheet(container, appData, id) {
       function doOpen() {
         if (cardState.close) cardState.close();
         cardState.close = doClose;
+        cardEl.setAttribute("data-editing", "");
         clear(bodyEl);
         bodyEl.append(renderEditFn(doClose));
       }
@@ -801,13 +819,14 @@ export function mountCharacterSheet(container, appData, id) {
       pencilBtn.innerHTML = PENCIL_SVG;
       pencilBtn.addEventListener("click", doOpen);
 
-      return el("section", { class: "sheet-card", "data-card": key }, [
+      cardEl.append(
         el("header", { class: "sheet-card-header" }, [
           el("h3", { class: "sheet-card-title" }, [title]),
           pencilBtn,
         ]),
         bodyEl,
-      ]);
+      );
+      return cardEl;
     }
 
     // Rels change in read-only mode → full re-render.

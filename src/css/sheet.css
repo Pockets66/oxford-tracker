@@ -189,6 +189,14 @@
   color: var(--accent);
 }
 
+.sheet-card[data-editing] {
+  border-color: var(--accent);
+}
+
+.sheet-card[data-editing] .sheet-card-header {
+  border-bottom-color: var(--accent);
+}
+
 /* ── Edit form layout ── */
 .sc-edit-form {
   display: flex;

@@ -211,10 +211,17 @@ Checkpoints:
 
 Replace the single-column printed view + giant edit modal with a two-column card layout where each card has its own pencil icon and edits inline. Left column (60%): Identity, button row, Summary, Background. Right column (40%): Zodiac, Languages, Skills, Factions & Relationships, Current. Button row has three action buttons: Relationships (wired), Factions (disabled, Slice 9), Timeline (disabled, Slice 9). Schema: LANGUAGE_LEVELS gains "Advanced"; new characters default to English (Native).
 
+**Status: done** — 2026-06-18
+
 Checkpoints:
-- CP1: Schema edits, two-column card layout (all read-only), old edit modal removed, Relationships button wired. **Done — 2026-06-18.**
-- CP2: Per-card pencil icons, inline edit forms, "Done" button / Escape, one card open at a time, debounced autosave.
-- CP3: Zodiac expander, language tier sorting, Current card three subsections, final visual pass. ROADMAP updated.
+- CP1: Schema edits, two-column card layout (all read-only), old edit modal removed, Relationships button wired. Done.
+- CP2: Per-card pencil icons, inline edit forms, "Done" button / Escape, one card open at a time, debounced autosave. Done.
+- CP3: Zodiac expander for moon/rising, `data-editing` attribute highlights active card border, CSS polish. Done.
+
+Followups:
+- Header (name, owner line) stays stale after editing Identity card — updates on next full re-render (navigate away and back). Pattern B (staged cancel) would fix this properly.
+- Faction Web and Personal Timeline buttons on the sheet are disabled, wired in Slice 9.
+- Current card is read-only derived data; no per-card edit needed.
 
 ## Slice 9: Cross linking pass
 
