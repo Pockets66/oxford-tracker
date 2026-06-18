@@ -145,7 +145,28 @@ Followups:
 - Language filter popover won't update its dropdown if new languages are added in the same session without a page reload (stale options). Refresh popover on re-open in a later pass.
 - "Only show filled fields in read mode" on the character sheet is deferred to Slice 6.5.
 
-## Slice 6: Scenes CRUD
+## Slice 6: Secrets system
+
+Secrets tab between Factions and Anomalies. Schema: `createSecret()`, `STATUS_TIERS` (6 tiers from Redacted to Yesterday's News), `computeStatus()` (auto from `knownToIds.length`, overridable), `statusSlug()`. New `src/data/secrets.json` seed. `main.js` `ENTITY_FILES` updated. Router + tab nav updated.
+
+Overview: Active/Archived toggle, filter bar (search, owner dropdown-chip with optgroups for chars + factions, status toggle chips that turn their tier color when active), card grid. Cards show title, status chip, summary excerpt, owner names, known count, hidden count.
+
+Secret page: title input, Archive/Delete controls, summary textarea, full body textarea, owner-characters picker, owner-factions picker, known-to-characters picker (adding here removes from hidden-from and vice versa), known-to-factions picker, hidden-from picker (constraint: can't overlap with known-to), character mentions picker, auto-computed status chip with optional override dropdown, tags chips, notes textarea.
+
+Character sheet: "Secrets known" and "Hidden from me" cards in the right column (replace the old placeholder card). Each renders a linked list of relevant active secrets.
+
+Characters filter sidebar: "Knows secret" facet (dropdown-chip, OR semantics, filters by `knownToIds`).
+
+`cards.secrets` removed from `createCharacter()` schema default.
+
+**Status: done** — 2026-06-18
+
+Followups:
+- Known-to and hidden-from pickers don't exclude characters already in the opposite list from the dropdown (they enforce the constraint on add, but the select still shows them as options). Tighten the exclusion function in a later pass.
+- Character sheet secrets cards are static on mount; adding a secret while the sheet is open won't reflect until re-navigation.
+- Secret counts on the overview card may drift if secrets are edited and the overview isn't re-mounted.
+
+## Slice 7: Scenes CRUD
 
 Scenes tab with card preview grid and per scene page. Fields: title, summary, body, status (draft, in progress, complete), **story beats** (what needs to happen, free text or list), **goals** (what we want out of this scene), attached plotlines (chosen later), characters with role per character (Key Actor, Observer, Background). Character add control uses a smart dropdown: if the scene has a faction attached, prioritize that faction's members. Otherwise prioritize characters who already know other characters in the scene (via the relationships graph).
 
@@ -155,21 +176,21 @@ Filter bar from `filters.js`:
 - Included characters facet, multi select (matches any character attached in any role)
 - Included actors facet, multi select with Bree, Jack, Nicole, Caiden, NPC (matches scenes containing any character owned by that actor)
 - Status facet
-- Attached plotline facet (populated in slice 7)
+- Attached plotline facet (populated in slice 8)
 
-## Slice 7: Plotlines with timeline
+## Slice 8: Plotlines with timeline
 
 Plotlines tab with sub-tab per plotline. Each plotline shows a vis-timeline. Scenes and standalone events sit on the timeline and can be dragged to reorder. Each item has a complete toggle. A progress indicator at the top of the plotline fills as items complete. Scenes on the timeline are click through to the scene page.
 
-## Slice 8: Cross linking pass
+## Slice 9: Cross linking pass
 
 Audit every entity view. Every character name, faction name, scene title, plotline title, and anomaly title appearing anywhere in the app must be a clickable link to that entity's page. Add a global search box in the header. Add breadcrumb or back navigation.
 
-## Slice 9: Anomalies tab
+## Slice 10: Anomalies tab
 
 Foley's Book of Anomalies. Overview cards plus per anomaly page. Fields: name, Primary P with level, Secondary Ps with levels (multiple), lore, related characters, related scenes. Sub-tabs across the top organized by P. Schema lets us add more Ps later without code changes.
 
-## Slice 10: Export, import, polish, search
+## Slice 11: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.
 

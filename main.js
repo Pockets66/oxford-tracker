@@ -2,7 +2,7 @@ const { app, BrowserWindow, ipcMain } = require("electron");
 const path = require("path");
 const fs = require("fs/promises");
 
-const ENTITY_FILES = ["characters", "factions", "scenes", "plotlines", "relationships", "anomalies", "meta"];
+const ENTITY_FILES = ["characters", "factions", "scenes", "plotlines", "relationships", "anomalies", "secrets", "meta"];
 
 function getDataFolder() {
   if (app.isPackaged) {

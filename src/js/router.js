@@ -1,4 +1,4 @@
-const TABS = ["characters", "scenes", "plotlines", "factions", "anomalies"];
+const TABS = ["characters", "scenes", "plotlines", "factions", "secrets", "anomalies"];
 
 function parsePath() {
   const hash = location.hash.replace(/^#\/?/, "");

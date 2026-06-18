@@ -5,6 +5,8 @@ import { mountCharacters } from "./views/characters.js";
 import { mountCharacterSheet } from "./views/character-sheet.js";
 import { mountFactions } from "./views/factions.js";
 import { mountFactionPage } from "./views/faction-page.js";
+import { mountSecrets } from "./views/secrets.js";
+import { mountSecretPage } from "./views/secret-page.js";
 import { migrateCharacters, migrateNamesToV3, migrateToV4 } from "./schema.js";
 import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
@@ -13,6 +15,7 @@ const TABS = [
   { id: "scenes",     label: "Scenes" },
   { id: "plotlines",  label: "Plotlines" },
   { id: "factions",   label: "Factions" },
+  { id: "secrets",    label: "Secrets" },
   { id: "anomalies",  label: "Anomalies" },
 ];
 
@@ -44,6 +47,15 @@ function mountView(tab, id) {
       mountFactionPage(main, appData, id);
     } else {
       mountFactions(main, appData);
+    }
+    return;
+  }
+
+  if (tab === "secrets") {
+    if (id) {
+      mountSecretPage(main, appData, id);
+    } else {
+      mountSecrets(main, appData);
     }
     return;
   }
@@ -135,6 +147,7 @@ async function init() {
     }
 
     appData.meta.knownLanguages ??= [];
+    appData.secrets ??= [];
 
     const writes = [];
     if (needCharSave) writes.push(save("characters", appData.characters));

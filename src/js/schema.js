@@ -5,6 +5,47 @@ const FACTION_PALETTE = [
 
 export const LANGUAGE_LEVELS = ["Broken", "Accented", "Native"];
 
+export const STATUS_TIERS = [
+  { name: "Redacted",         minKnown: 0,  maxKnown: 1  },
+  { name: "Deep",             minKnown: 2,  maxKnown: 3  },
+  { name: "Conspiracy",       minKnown: 4,  maxKnown: 6  },
+  { name: "Hot Goss",         minKnown: 7,  maxKnown: 10 },
+  { name: "Spilled Tea",      minKnown: 11, maxKnown: 14 },
+  { name: "Yesterday's News", minKnown: 15, maxKnown: Infinity },
+];
+
+export function statusSlug(name) {
+  return name.toLowerCase().replace(/'/g, "").replace(/\s+/g, "-");
+}
+
+export function computeStatus(secret) {
+  if (secret.statusOverride) return secret.statusOverride;
+  const n = (secret.knownToIds ?? []).length;
+  return STATUS_TIERS.find(t => n >= t.minKnown && n <= t.maxKnown)?.name ?? "Redacted";
+}
+
+export function createSecret() {
+  const now = new Date().toISOString();
+  return {
+    id: crypto.randomUUID(),
+    title: "",
+    summary: "",
+    body: "",
+    ownerCharacterIds: [],
+    ownerFactionIds: [],
+    knownToIds: [],
+    knownToFactionIds: [],
+    hiddenFromIds: [],
+    characterTagIds: [],
+    tags: [],
+    statusOverride: null,
+    archived: false,
+    notes: "",
+    createdAt: now,
+    updatedAt: now,
+  };
+}
+
 // ── Relationship constants ────────────────────────────────────────────────────
 
 export const STRUCTURAL_TYPES = [
@@ -72,7 +113,7 @@ export function createCharacter() {
     factionIds: [],
     summary: "",
     background: "",
-    cards: { skills: "", secrets: "", notes: "" },
+    cards: { skills: "", notes: "" },
     createdAt: now,
     updatedAt: now,
   };

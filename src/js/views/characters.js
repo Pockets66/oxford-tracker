@@ -43,6 +43,7 @@ const DEFAULT_STATE = {
   language:     [],
   supernatural: null,
   showDeceased: true,
+  secret:       [],
 };
 
 function loadFilterState() {
@@ -57,6 +58,7 @@ function loadFilterState() {
         language:     Array.isArray(s.language) ? s.language : [],
         supernatural: s.supernatural !== undefined ? s.supernatural : null,
         showDeceased: s.showDeceased !== undefined ? s.showDeceased : true,
+        secret:       Array.isArray(s.secret)   ? s.secret   : [],
       };
     }
   } catch {}
@@ -74,11 +76,12 @@ function isFilterModified(state) {
     state.faction.length ||
     state.language.length ||
     state.supernatural !== null ||
-    !state.showDeceased
+    !state.showDeceased ||
+    state.secret.length
   );
 }
 
-function applyFilters(characters, state) {
+function applyFilters(characters, state, secrets) {
   let result = characters;
 
   if (state.search) {
@@ -118,6 +121,15 @@ function applyFilters(characters, state) {
 
   if (!state.showDeceased) {
     result = result.filter(c => !c.deceased);
+  }
+
+  if (state.secret.length) {
+    result = result.filter(c =>
+      state.secret.some(sId => {
+        const s = (secrets ?? []).find(s2 => s2.id === sId);
+        return s?.knownToIds?.includes(c.id);
+      })
+    );
   }
 
   return result;
@@ -180,7 +192,7 @@ export function mountCharacters(container, appData) {
   function renderGrid() {
     clear(grid);
     const currentDate = appData.meta?.currentDate ?? null;
-    const visible = applyFilters(appData.characters, filterState);
+    const visible = applyFilters(appData.characters, filterState, appData.secrets ?? []);
     if (!visible.length) {
       grid.append(el("p", { class: "character-empty" }, ["No characters match."]));
     } else {
@@ -302,6 +314,39 @@ export function mountCharacters(container, appData) {
   });
   renderLangChips();
 
+  // ── Secret filter ──
+  const secretChipsEl = el("div", { class: "filter-faction-chips" });
+
+  function renderSecretChips() {
+    clear(secretChipsEl);
+    for (const sId of filterState.secret) {
+      const s = (appData.secrets ?? []).find(s2 => s2.id === sId);
+      secretChipsEl.append(el("span", { class: "filter-faction-active-chip" }, [
+        s?.title || "(untitled)",
+        el("button", { class: "filter-faction-chip-remove", onclick: () => {
+          filterState.secret = filterState.secret.filter(id => id !== sId);
+          renderSecretChips();
+          onChange();
+        }}, ["×"]),
+      ]));
+    }
+  }
+
+  const secretSelect = el("select", { class: "filter-faction-select" });
+  secretSelect.append(el("option", { value: "" }, ["Filter by secret…"]));
+  for (const s of [...(appData.secrets ?? [])].filter(s2 => !s2.archived).sort((a, b) => (a.title || "").localeCompare(b.title || ""))) {
+    secretSelect.append(el("option", { value: s.id }, [s.title || "(untitled)"]));
+  }
+  secretSelect.addEventListener("change", () => {
+    const val = secretSelect.value;
+    if (!val || filterState.secret.includes(val)) { secretSelect.value = ""; return; }
+    filterState.secret = [...filterState.secret, val];
+    secretSelect.value = "";
+    renderSecretChips();
+    onChange();
+  });
+  renderSecretChips();
+
   // ── Supernatural 3-state cycle ──
   const SUP_STATES = [null, true, false];
   const SUP_LABELS = ["All", "Knows ✓", "Doesn't know"];
@@ -340,6 +385,10 @@ export function mountCharacters(container, appData) {
       el("div", { class: "filter-faction-wrap" }, [langSelect, langChipsEl]),
     ]),
     el("div", { class: "filter-popover-row" }, [
+      el("span", { class: "filter-popover-label" }, ["Knows secret"]),
+      el("div", { class: "filter-faction-wrap" }, [secretSelect, secretChipsEl]),
+    ]),
+    el("div", { class: "filter-popover-row" }, [
       el("span", { class: "filter-popover-label" }, ["Supernatural"]),
       supBtn,
     ]),
@@ -367,6 +416,7 @@ export function mountCharacters(container, appData) {
     }
     renderFactionChips();
     renderLangChips();
+    renderSecretChips();
     supIdx = 0;
     updateSupBtn();
     deceasedCheck.checked = true;

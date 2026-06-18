@@ -528,6 +528,26 @@ export function mountCharacterSheet(container, appData, id) {
     ]);
   }
 
+  function makeSecretsKnownCard() {
+    const secrets = (appData.secrets ?? []).filter(s => !s.archived && (s.knownToIds ?? []).includes(character.id));
+    if (!secrets.length) return el("p", { class: "sheet-empty-note" }, ["No known secrets."]);
+    const list = el("div", { class: "secret-link-list" });
+    for (const s of secrets) {
+      list.append(el("a", { class: "secret-link-row", href: `#/secrets/${s.id}` }, [s.title || "(untitled)"]));
+    }
+    return list;
+  }
+
+  function makeHiddenFromCard() {
+    const secrets = (appData.secrets ?? []).filter(s => !s.archived && (s.hiddenFromIds ?? []).includes(character.id));
+    if (!secrets.length) return el("p", { class: "sheet-empty-note" }, ["Nothing hidden from this character."]);
+    const list = el("div", { class: "secret-link-list" });
+    for (const s of secrets) {
+      list.append(el("a", { class: "secret-link-row", href: `#/secrets/${s.id}` }, [s.title || "(untitled)"]));
+    }
+    return list;
+  }
+
   function cardTa(key) {
     const ta = el("textarea", { class: "sheet-textarea" });
     ta.value = character.cards?.[key] ?? "";
@@ -572,7 +592,8 @@ export function mountCharacterSheet(container, appData, id) {
         makeCard("Current Plots", el("p", { class: "sheet-empty-note" }, ["No current plots."])),
         makeCard("Languages", makeLanguagesCard()),
         makeCard("Skills",  cardTa("skills")),
-        makeCard("Secrets", el("p", { class: "sheet-empty-note" }, ["Secrets will be tracked in the Secrets tab."])),
+        makeCard("Secrets known", makeSecretsKnownCard()),
+        makeCard("Hidden from me", makeHiddenFromCard()),
         makeCard("Notes",   cardTa("notes")),
       ]),
     ])
