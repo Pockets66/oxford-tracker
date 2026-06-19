@@ -1,0 +1,390 @@
+:root {
+  --class-i:    #4a1a1a;
+  --class-ii:   #7a1f1f;
+  --class-iii:  #9a3520;
+  --class-iv:   #a85a1f;
+  --class-v:    #b88a2a;
+  --class-vi:   #8a7a3a;
+  --class-vii:  #4a6a6a;
+  --class-viii: #5a8a9a;
+  --class-ix:   #6a9ac0;
+  --class-x:    #a0c0d8;
+}
+
+.class-chip {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: #fff;
+  border-radius: 2px;
+}
+.class-chip--i    { background: var(--class-i); }
+.class-chip--ii   { background: var(--class-ii); }
+.class-chip--iii  { background: var(--class-iii); }
+.class-chip--iv   { background: var(--class-iv); }
+.class-chip--v    { background: var(--class-v); }
+.class-chip--vi   { background: var(--class-vi); }
+.class-chip--vii  { background: var(--class-vii); }
+.class-chip--viii { background: var(--class-viii); }
+.class-chip--ix   { background: var(--class-ix);  color: var(--text); }
+.class-chip--x    { background: var(--class-x);   color: var(--text); }
+
+/* ── Toolbar ─────────────────────────────────────────────────────────────── */
+
+.anomalies-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* ── Filter bar ──────────────────────────────────────────────────────────── */
+
+.anomalies-filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.anomaly-class-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+  align-items: center;
+}
+
+.anomaly-class-toggle {
+  cursor: pointer;
+  border: none;
+  border-radius: 2px;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  padding: 0.2rem 0.45rem;
+  transition: opacity 0.15s;
+}
+.anomaly-class-toggle.is-off {
+  opacity: 0.3;
+}
+
+.anomalies-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+/* ── Card grid ───────────────────────────────────────────────────────────── */
+
+.anomaly-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.anomaly-card {
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.anomaly-card:hover {
+  border-color: var(--gold);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+
+.anomaly-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.anomaly-card-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.15rem;
+  font-weight: 500;
+  color: var(--heading);
+  margin: 0;
+  line-height: 1.3;
+}
+
+.anomaly-card-primary {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  color: var(--text);
+}
+
+.anomaly-glyph {
+  display: inline-flex;
+  align-items: center;
+  vertical-align: middle;
+  color: var(--text-muted);
+}
+
+.anomaly-card-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.anomaly-secondary-chip {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.4rem;
+  border-radius: 2px;
+  background: var(--border);
+  color: var(--text-muted);
+}
+
+.anomaly-card-location {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  margin: 0;
+  font-style: italic;
+}
+
+.anomaly-card-lore {
+  font-size: 0.82rem;
+  color: var(--text);
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  flex: 1;
+}
+
+.anomaly-card-footer {
+  margin-top: auto;
+  padding-top: 0.4rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* ── Status chips ────────────────────────────────────────────────────────── */
+
+.anomaly-status-chip {
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.5rem;
+  border-radius: 2px;
+  background: var(--border);
+  color: var(--text-muted);
+}
+.anomaly-status-chip--active      { background: #3d5a3e; color: #c8e6c9; }
+.anomaly-status-chip--contained   { background: #4a4a2a; color: #e6d87a; }
+.anomaly-status-chip--dormant     { background: #3a3a5a; color: #a0aacc; }
+.anomaly-status-chip--eradicated  { background: #2a3a2a; color: #7aaa7a; }
+.anomaly-status-chip--unknown     { background: var(--border); color: var(--text-muted); }
+
+/* ── Empty state ─────────────────────────────────────────────────────────── */
+
+.anomaly-empty {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 3rem 1rem;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+/* ── Observations ────────────────────────────────────────────────────────── */
+
+.anomaly-obs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+}
+
+.anomaly-obs-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.5rem 0.4rem;
+  border-bottom: 1px solid var(--border);
+}
+.anomaly-obs-row:last-child {
+  border-bottom: none;
+}
+
+.anomaly-obs-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.anomaly-obs-meta {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.2rem;
+}
+
+.anomaly-obs-date {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-style: italic;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.anomaly-obs-title {
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  color: var(--heading);
+}
+
+.anomaly-obs-body {
+  font-size: 0.83rem;
+  color: var(--text);
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.anomaly-obs-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  flex-shrink: 0;
+}
+
+.anomaly-obs-edit-btn {
+  background: none;
+  border: none;
+  padding: 0.2rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  opacity: 0.6;
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+}
+.anomaly-obs-edit-btn:hover { opacity: 1; color: var(--gold); }
+
+.anomaly-obs-delete-btn {
+  font-size: 0.75rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.anomaly-obs-add-btn {
+  margin-top: 0.4rem;
+  align-self: flex-start;
+}
+
+.anomaly-obs-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 0.5rem;
+  background: var(--card-bg);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  margin-bottom: 0.4rem;
+}
+
+.anomaly-obs-form-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.anomaly-obs-form-row .sheet-input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.anomaly-obs-form-btns {
+  display: flex;
+  gap: 0.4rem;
+}
+
+/* ── Anomaly page ────────────────────────────────────────────────────────── */
+
+.anomaly-page-body {
+  padding: 1.25rem;
+}
+
+.anomaly-type-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.anomaly-secondary-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+/* ── Index view ──────────────────────────────────────────────────────────── */
+
+.anomaly-index {
+  padding: 1.25rem;
+  max-width: 900px;
+}
+
+.anomaly-index-group {
+  margin-bottom: 2rem;
+}
+
+.anomaly-index-group-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--heading);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.5rem;
+}
+
+.anomaly-index-row {
+  display: grid;
+  grid-template-columns: 1fr auto auto auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.35rem 0.5rem;
+  cursor: pointer;
+  border-radius: 2px;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  color: var(--text);
+  transition: background 0.12s;
+}
+.anomaly-index-row:hover {
+  background: var(--hover-bg, rgba(180,150,80,0.07));
+}
+
+.anomaly-index-row-title {
+  font-weight: 500;
+}
+
+.anomaly-index-row-meta {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}

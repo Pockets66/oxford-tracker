@@ -294,9 +294,30 @@ export function mountScenePage(container, appData, id) {
     navigate("scenes");
   });
 
+  // ── Related anomalies (read-only) ──
+  function buildAnomalySection() {
+    const related = (appData.anomalies ?? []).filter(a =>
+      !a.archived && (a.sceneIds ?? []).includes(scene.id)
+    );
+    if (!related.length) return null;
+
+    const chips = related.map(a => {
+      const chip = el("a", { class: "scene-page-anomaly-chip", href: `#/anomalies/${a.id}` }, [
+        a.title || "(unnamed anomaly)",
+      ]);
+      return chip;
+    });
+
+    return section("Related anomalies",
+      el("div", { class: "scene-page-chips scene-page-chips--anomaly" }, chips),
+    );
+  }
+
   // Initial renders
   renderFactionSection();
   renderCharSection();
+
+  const anomalySection = buildAnomalySection();
 
   container.append(
     el("div", { class: "scene-page" }, [
@@ -320,6 +341,7 @@ export function mountScenePage(container, appData, id) {
       section("Body", bodyTa),
       factionSectionEl,
       charSectionEl,
+      ...(anomalySection ? [anomalySection] : []),
       section("Notes", notesTa),
       el("div", { class: "scene-page-delete-row" }, [deleteBtn]),
     ]),

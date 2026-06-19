@@ -176,6 +176,17 @@
   cursor: pointer;
 }
 
+/* ── Anomaly items ── */
+.gtl-anomaly.vis-item {
+  cursor: pointer;
+  opacity: 0.9;
+}
+
+.gtl-anomaly-obs.vis-item {
+  cursor: pointer;
+  opacity: 0.75;
+}
+
 /* ── Add event button ── */
 .gtl-add-btn {
   color: var(--accent);

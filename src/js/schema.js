@@ -219,6 +219,81 @@ export function createTimelineEvent() {
   };
 }
 
+// ── Anomaly constants ─────────────────────────────────────────────────────────
+
+export const ANOMALY_CATEGORIES = [
+  { name: "Paradoxical",   description: "Time-loop entities, rifts, beings that exist and don't exist depending on observation." },
+  { name: "Parasites",     description: "Soul-leeches that drain without killing outright." },
+  { name: "Pathological",  description: "Conditions like vampirism-as-disease, cursed bloodlines producing involuntary monstrous transformation." },
+  { name: "Patrons",       description: "Bargaining entities where the deal is the point." },
+  { name: "Penitents",     description: "Revenants with unfinished business, oath-bound spirits." },
+  { name: "Pest",          description: "Imps, soured brownies, poltergeists that just throw cutlery." },
+  { name: "Phantom",       description: "Standard ghosts, residual hauntings." },
+  { name: "Plague",        description: "Hive-mind possession events, contagious hauntings, entities that jump host to host." },
+  { name: "Polluters",     description: "Land-tainting entities, gone-wrong river spirits, cursed groves." },
+  { name: "Portents",      description: "Omen-bearing entities that appear before events." },
+  { name: "Possessors",    description: "Spirits that hijack a living body." },
+  { name: "Predators",     description: "Entities in active hunt mode." },
+  { name: "Preternatural", description: "Outer entities, things that came through from elsewhere." },
+  { name: "Pretenders",    description: "Doppelgangers, changelings wearing human shape." },
+  { name: "Primordial",    description: "Old gods, dragons in the sense of beings that predate human reckoning." },
+  { name: "Progenitors",   description: "Originators in a lineage: the first vampire who turns others, alpha werewolves who make more." },
+  { name: "Puppeteers",    description: "Entities that operate victims from a distance without entering them." },
+];
+
+export const ANOMALY_CLASSES = [
+  { roman: "I",    label: "Reality-breaking" },
+  { roman: "II",   label: "Catastrophic" },
+  { roman: "III",  label: "Lethal" },
+  { roman: "IV",   label: "Hazardous" },
+  { roman: "V",    label: "Threatening" },
+  { roman: "VI",   label: "Disruptive" },
+  { roman: "VII",  label: "Unsettling" },
+  { roman: "VIII", label: "Curious" },
+  { roman: "IX",   label: "Mild" },
+  { roman: "X",    label: "Negligible" },
+];
+
+export const ANOMALY_STATUSES = ["Active", "Contained", "Dormant", "Eradicated", "Unknown"];
+
+export function createAnomaly() {
+  const now = new Date().toISOString();
+  return {
+    id:              crypto.randomUUID(),
+    title:           "",
+    primaryCategory: null,
+    primaryClass:    null,
+    secondaryTypes:  [],
+    status:          "Unknown",
+    location:        "",
+    discoveryDate:   null,
+    lore:            "",
+    observations:    [],
+    characterIds:    [],
+    sceneIds:        [],
+    plotlineIds:     [],
+    secretIds:       [],
+    tags:            [],
+    notes:           "",
+    archived:        false,
+    createdAt:       now,
+    updatedAt:       now,
+  };
+}
+
+export function anomalyOverallClass(anomaly) {
+  const classes = [anomaly.primaryClass, ...(anomaly.secondaryTypes ?? []).map(t => t.class)].filter(Boolean);
+  if (!classes.length) return null;
+  const orderedRomans = ANOMALY_CLASSES.map(c => c.roman);
+  let lowest    = classes[0];
+  let lowestIdx = orderedRomans.indexOf(lowest);
+  for (const c of classes) {
+    const idx = orderedRomans.indexOf(c);
+    if (idx < lowestIdx) { lowest = c; lowestIdx = idx; }
+  }
+  return lowest;
+}
+
 // ── Migrations ───────────────────────────────────────────────────────────────
 
 // Migration v1→v2: old `sheet` shape → new `background` + `cards` shape.

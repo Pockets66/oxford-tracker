@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS, RELATIONSHIP_BANDS } from "../schema.js";
+import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS, RELATIONSHIP_BANDS, anomalyOverallClass } from "../schema.js";
 import { sunSignFromDate } from "../zodiac.js";
 import { createCombobox } from "../components/combobox.js";
 import { formatLongDate } from "../dates.js";
@@ -406,8 +406,12 @@ function renderCurrentRO(ch, appData) {
     !s.archived && (s.hiddenFromIds ?? []).includes(ch.id)
   );
 
-  if (!plotlines.length && !secretsKnown.length && !hiddenFrom.length) {
-    return scEmpty("No current plots or secrets.");
+  const anomaliesInvolved = (appData.anomalies ?? []).filter(a =>
+    !a.archived && (a.characterIds ?? []).includes(ch.id)
+  );
+
+  if (!plotlines.length && !secretsKnown.length && !hiddenFrom.length && !anomaliesInvolved.length) {
+    return scEmpty("No current plots, secrets, or anomalies.");
   }
 
   const parts = [];
@@ -431,6 +435,17 @@ function renderCurrentRO(ch, appData) {
     parts.push(el("ul", { class: "printed-scene-list" }, hiddenFrom.map(s =>
       el("li", {}, [el("a", { href: `#/secrets/${s.id}` }, [s.title || "(untitled)"])])
     )));
+  }
+
+  if (anomaliesInvolved.length) {
+    parts.push(el("p", { class: "sc-sublabel" }, ["Anomalies"]));
+    parts.push(el("ul", { class: "printed-scene-list" }, anomaliesInvolved.map(a => {
+      const overall = anomalyOverallClass(a);
+      const slug    = overall ? overall.toLowerCase() : null;
+      const chip    = slug ? el("span", { class: `class-chip class-chip--${slug}` }, [overall]) : null;
+      const link    = el("a", { href: `#/anomalies/${a.id}` }, [a.title || "(unnamed anomaly)"]);
+      return el("li", { class: "sc-anomaly-row" }, chip ? [link, " — ", chip] : [link]);
+    })));
   }
 
   return el("div", { class: "sc-body" }, parts);

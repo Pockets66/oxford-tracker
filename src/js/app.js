@@ -11,6 +11,8 @@ import { mountPlotlines } from "./views/plotlines.js";
 import { mountSecrets } from "./views/secrets.js";
 import { mountSecretPage } from "./views/secret-page.js";
 import { mountGlobalTimeline } from "./views/global-timeline.js";
+import { mountAnomalies } from "./views/anomalies.js";
+import { mountAnomalyPage } from "./views/anomaly-page.js";
 import { migrateCharacters, migrateNamesToV3, migrateToV4 } from "./schema.js";
 import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
@@ -24,9 +26,7 @@ const TABS = [
   { id: "anomalies",  label: "Anomalies" },
 ];
 
-const COMING_SLICE = {
-  anomalies: "Slice 10",
-};
+const COMING_SLICE = {};
 
 let appData = null;
 
@@ -75,6 +75,15 @@ function mountView(tab, id) {
       mountSecretPage(main, appData, id);
     } else {
       mountSecrets(main, appData);
+    }
+    return;
+  }
+
+  if (tab === "anomalies") {
+    if (id) {
+      mountAnomalyPage(main, appData, id);
+    } else {
+      mountAnomalies(main, appData);
     }
     return;
   }
@@ -170,6 +179,7 @@ async function init() {
     appData.scenes         ??= [];
     appData.plotlines      ??= [];
     appData.timelineEvents ??= [];
+    appData.anomalies      ??= [];
 
     const writes = [];
     if (needCharSave) writes.push(save("characters", appData.characters));

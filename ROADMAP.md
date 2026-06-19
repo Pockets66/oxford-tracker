@@ -265,9 +265,22 @@ Followups:
 - Link checkboxes start closed; a "show all" / search within links would help for the Work category which is long.
 - The "Other characters involved" multi-picker in the event dialog is still deferred.
 
-## Slice 12: Anomalies tab
+## Slice 13: Anomalies
 
-Foley's Book of Anomalies. Overview cards plus per anomaly page. Fields: name, Primary P with level, Secondary Ps with levels (multiple), lore, related characters, related scenes. Sub-tabs across the top organized by P. Schema lets us add more Ps later without code changes.
+Foley's Book of Anomalies. 17 P-type categories, 10 class tiers (I–X), overall class auto-computed, two view modes (Card grid + Journal Index), observations log, related entities, cross-links from character sheet / scene page / global timeline / global search.
+
+Prompt: `prompts/13-anomalies.md`
+
+Checkpoints:
+- CP1: Schema (ANOMALY_CATEGORIES, ANOMALY_CLASSES, ANOMALY_STATUSES, createAnomaly, anomalyOverallClass), anomaly-glyphs.js (17 SVG glyphs), anomalies.css (class chip colors), anomalies.js overview (toolbar, filter bar with persistence, card grid, index view), anomaly-page.js basic (title, types, lore). Routes wired. **Done — 2026-06-19.**
+- CP2: Full anomaly page — two-column layout (lore + observations left; types, status, location, discovery date, related entities, tags, notes right). Observations as dated log entries with add/edit/delete inline forms. Related characters/scenes/plotlines/secrets via combobox + chips. Tags chips. **Done — 2026-06-19.**
+- CP3: Cross-links from character sheet (Anomalies section), scene page (Related Anomalies), global timeline (discovery date + observation dates + filter facet), global search. **Done — 2026-06-19.** Global search deferred — Slice 12 not yet built.
+
+**Status: done** — 2026-06-19
+
+Followups:
+- Global search cross-link deferred; Slice 12 (search) will add anomalies to the search index when implemented.
+- Kind filter bug in global-timeline fixed: item kind strings were singular but ALL_KINDS used plural; corrected as part of adding "anomalies" kind.
 
 ## Slice 12: Export, import, polish, search
 

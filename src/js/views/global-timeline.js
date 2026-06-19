@@ -1,8 +1,16 @@
 import { el, clear } from "../dom.js";
-import { displayName } from "../schema.js";
+import { displayName, anomalyOverallClass } from "../schema.js";
 import { formatFlexibleDate } from "../dates.js";
 import { navigate } from "../router.js";
 import { openTimelineEventDialog } from "./timeline-event-dialog.js";
+
+const CLASS_COLORS = {
+  "I":    "#4a1a1a", "II":   "#7a1f1f", "III":  "#9a3520",
+  "IV":   "#a85a1f", "V":    "#b88a2a", "VI":   "#8a7a3a",
+  "VII":  "#4a6a6a", "VIII": "#5a8a9a", "IX":   "#6a9ac0",
+  "X":    "#a0c0d8",
+};
+const LIGHT_CLASS = new Set(["IX", "X"]);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -92,7 +100,7 @@ function buildAllItems(appData) {
       type:         "box",
       className,
       style,
-      kind:         "scene",
+      kind:         "scenes",
       status:       sc.status ?? "Draft",
       sceneId:      sc.id,
       characterIds: charIds,
@@ -122,7 +130,7 @@ function buildAllItems(appData) {
       type:         "box",
       className:    "gtl-event",
       style:        "",
-      kind:         "event",
+      kind:         "events",
       eventId:      ev.id,
       characterIds: ev.characterIds ?? [],
       factionIds:   effectiveFactions(ev.characterIds ?? [], ev.factionIds ?? []),
@@ -143,7 +151,7 @@ function buildAllItems(appData) {
       type:         "point",
       className:    "gtl-birth",
       style:        "",
-      kind:         "birth",
+      kind:         "births",
       characterId:  ch.id,
       characterIds: [ch.id],
       factionIds:   effectiveFactions([ch.id], []),
@@ -164,7 +172,7 @@ function buildAllItems(appData) {
       type:         "point",
       className:    "gtl-death",
       style:        "",
-      kind:         "death",
+      kind:         "deaths",
       characterId:  ch.id,
       characterIds: [ch.id],
       factionIds:   effectiveFactions([ch.id], []),
@@ -172,12 +180,72 @@ function buildAllItems(appData) {
     });
   }
 
+  // Anomaly discovery dates + observations
+  for (const a of appData.anomalies ?? []) {
+    if (a.archived) continue;
+    const overall   = anomalyOverallClass(a);
+    const color     = overall ? (CLASS_COLORS[overall] ?? "#4a6a6a") : "#4a6a6a";
+    const textColor = overall && LIGHT_CLASS.has(overall) ? "#2a1f15" : "#f4ecd8";
+    const aCharIds  = a.characterIds ?? [];
+    const aPl       = a.plotlineIds  ?? [];
+
+    if (a.discoveryDate) {
+      const d = toJsDate(a.discoveryDate);
+      if (d) {
+        items.push({
+          id:           `anomaly:${a.id}`,
+          content:      a.title || "(unnamed anomaly)",
+          tooltip:      [
+            `<b>${a.title || "(unnamed anomaly)"}</b>`,
+            `Discovered: ${formatFlexibleDate(a.discoveryDate)}`,
+            overall ? `Class ${overall}` : null,
+            a.status ? a.status : null,
+          ].filter(Boolean).join("<br>"),
+          start:        d,
+          type:         "box",
+          className:    "gtl-anomaly",
+          style:        `background-color:${color};border-color:${color};color:${textColor};`,
+          kind:         "anomalies",
+          anomalyId:    a.id,
+          characterIds: aCharIds,
+          factionIds:   effectiveFactions(aCharIds, []),
+          plotlineIds:  aPl,
+        });
+      }
+    }
+
+    for (const obs of a.observations ?? []) {
+      if (!obs.date) continue;
+      const d = toJsDate(obs.date);
+      if (!d) continue;
+      items.push({
+        id:           `anomaly-obs:${a.id}:${obs.id}`,
+        content:      `${a.title || "(unnamed)"}: ${obs.title || "(observation)"}`,
+        tooltip:      [
+          `<b>${a.title || "(unnamed)"}</b>`,
+          obs.date ? formatFlexibleDate(obs.date) : null,
+          obs.title  || null,
+          obs.body   || null,
+        ].filter(Boolean).join("<br>"),
+        start:        d,
+        type:         "point",
+        className:    "gtl-anomaly-obs",
+        style:        `color:${color};border-color:${color};`,
+        kind:         "anomalies",
+        anomalyId:    a.id,
+        characterIds: aCharIds,
+        factionIds:   effectiveFactions(aCharIds, []),
+        plotlineIds:  aPl,
+      });
+    }
+  }
+
   return items;
 }
 
 // ── Filter state ──────────────────────────────────────────────────────────────
 
-export const ALL_KINDS    = ["scenes", "events", "births", "deaths"];
+export const ALL_KINDS    = ["scenes", "events", "births", "deaths", "anomalies"];
 export const ALL_STATUSES = ["Draft", "In progress", "Complete"];
 const PERSIST_KEY         = "global-timeline";
 
@@ -319,11 +387,13 @@ export async function mountGlobalTimeline(container, appData) {
         const item = allItems.find(i => String(i.id) === raw);
         if (!item) return;
 
-        if (item.kind === "scene") {
+        if (item.kind === "scenes") {
           navigate(`scenes/${item.sceneId}`);
-        } else if (item.kind === "birth" || item.kind === "death") {
+        } else if (item.kind === "births" || item.kind === "deaths") {
           navigate(`characters/${item.characterId}`);
-        } else if (item.kind === "event") {
+        } else if (item.kind === "anomalies") {
+          navigate(`anomalies/${item.anomalyId}`);
+        } else if (item.kind === "events") {
           const ev = (appData.timelineEvents ?? []).find(e => e.id === item.eventId);
           if (!ev) return;
           openTimelineEventDialog({
@@ -361,7 +431,7 @@ export async function mountGlobalTimeline(container, appData) {
   clearBtn.style.display = isModified(state) ? "" : "none";
 
   // Kind toggle chips
-  const KIND_LABELS = { scenes: "Scenes", events: "Events", births: "Births", deaths: "Deaths" };
+  const KIND_LABELS = { scenes: "Scenes", events: "Events", births: "Births", deaths: "Deaths", anomalies: "Anomalies" };
   const kindBtns = ALL_KINDS.map(kind => {
     const btn = el("button", { class: "gtl-kind-toggle" }, [KIND_LABELS[kind]]);
     btn.classList.toggle("is-active", state.kinds.includes(kind));

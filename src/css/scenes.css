@@ -333,6 +333,22 @@
   padding: 0.2rem 0.5rem;
 }
 
+.scene-page-anomaly-chip {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: inline-block;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.78rem;
+  padding: 0.2rem 0.5rem;
+  text-decoration: none;
+}
+
+.scene-page-anomaly-chip:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
 .scene-page-chip-remove {
   background: none;
   border: none;
