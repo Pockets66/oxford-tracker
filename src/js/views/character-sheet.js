@@ -5,10 +5,42 @@ import { syncFactionMembership, displayName, computeAge, LANGUAGE_LEVELS, RELATI
 import { sunSignFromDate } from "../zodiac.js";
 import { createCombobox } from "../components/combobox.js";
 import { formatLongDate } from "../dates.js";
+import { computeNatalChart } from "../util/astrology.js";
 
 const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
 const SIGNS  = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
                  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+
+const SIGN_GLYPHS = {
+  Aries:"♈", Taurus:"♉", Gemini:"♊", Cancer:"♋", Leo:"♌", Virgo:"♍",
+  Libra:"♎", Scorpio:"♏", Sagittarius:"♐", Capricorn:"♑", Aquarius:"♒", Pisces:"♓",
+};
+
+const OUTER_PLANETS = [
+  ["jupiter", "Jup"], ["saturn", "Sat"], ["uranus", "Ura"], ["neptune", "Nep"], ["pluto", "Plu"],
+];
+
+async function recomputeChartIfReady(character, appData) {
+  if (!character.birthday) {
+    character.natalChart = null;
+    return;
+  }
+  const city = character.birthCityId
+    ? (appData.meta.knownCities ?? []).find(c => c.id === character.birthCityId)
+    : null;
+  try {
+    character.natalChart = await computeNatalChart({
+      birthday:  character.birthday,
+      birthTime: character.birthTime || null,
+      lat:       city?.lat ?? null,
+      lng:       city?.lng ?? null,
+      timezone:  city?.timezone ?? null,
+    });
+  } catch (err) {
+    console.error("natal chart compute failed", err);
+    character.natalChart = null;
+  }
+}
 
 const PENCIL_SVG = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>`;
 
@@ -174,17 +206,16 @@ function renderIdentityRO(ch, appData) {
 }
 
 function renderZodiacRO(ch, appData) {
-  const sun    = ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
-  const moon   = ch.zodiac?.moon;
-  const rising = ch.zodiac?.rising;
+  const chart = ch.natalChart;
+  const sun   = chart?.bodies?.sun?.sign ?? ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
 
-  if (!ch.birthday && !sun && !moon && !rising && !ch.birthTime && !ch.birthCityId) return scEmpty("No astrological data.");
+  if (!ch.birthday && !sun && !ch.zodiac?.moon && !ch.zodiac?.rising && !ch.birthTime && !ch.birthCityId) {
+    return scEmpty("No astrological data.");
+  }
 
   const items = [];
   if (ch.birthday) items.push(el("p", { class: "sc-astro-birthday" }, [formatLongDate(ch.birthday)]));
   if (sun) items.push(el("p", { class: "sc-astro-sun" }, [sun]));
-  const extra = [moon ? `Moon in ${moon}` : null, rising ? `Rising ${rising}` : null].filter(Boolean);
-  if (extra.length) items.push(el("p", { class: "sc-astro-extra" }, [extra.join(" · ")]));
 
   const cityName = ch.birthCityId
     ? (appData?.meta?.knownCities ?? []).find(c => c.id === ch.birthCityId)?.name ?? null
@@ -194,6 +225,61 @@ function renderZodiacRO(ch, appData) {
     if (ch.birthTime) parts.push(`Born ${ch.birthTime}`);
     if (cityName)     parts.push(ch.birthTime ? `in ${cityName}` : `Born in ${cityName}`);
     items.push(el("p", { class: "sc-astro-birthplace" }, [parts.join(" ")]));
+  }
+
+  if (chart) {
+    // Moon + Rising
+    const moon       = ch.zodiac?.moon || chart.bodies.moon?.sign || null;
+    const moonApprox = !ch.zodiac?.moon && chart.bodies.moon?.approximate === true;
+    const rising     = ch.zodiac?.rising || chart.angles?.ascendant?.sign || null;
+
+    if (moon || rising) {
+      const lineEl = el("p", { class: "zodiac-line-moon-rising" });
+      const segs   = [];
+      if (moon) {
+        if (moonApprox) {
+          const s = el("span");
+          s.append(`Moon in ${moon}`, el("span", { class: "zodiac-approx-note" }, [" (approx.)"]));
+          segs.push(s);
+        } else {
+          segs.push(`Moon in ${moon}`);
+        }
+      }
+      if (rising) segs.push(`Rising ${rising}`);
+      for (let i = 0; i < segs.length; i++) {
+        if (i > 0) lineEl.append(" · ");
+        lineEl.append(segs[i]);
+      }
+      items.push(lineEl);
+    }
+
+    // Inner planets: Mercury, Venus, Mars
+    const innerParts = ["mercury", "venus", "mars"]
+      .map(b => {
+        const sign = chart.bodies[b]?.sign;
+        return sign ? `${b.charAt(0).toUpperCase() + b.slice(1)} ${sign}` : null;
+      })
+      .filter(Boolean);
+    if (innerParts.length) {
+      items.push(el("p", { class: "zodiac-line-inner-planets" }, [innerParts.join(" · ")]));
+    }
+
+    // Outer planets: Jupiter through Pluto with sign glyphs
+    const outerParts = OUTER_PLANETS
+      .map(([b, abbr]) => {
+        const sign = chart.bodies[b]?.sign;
+        return sign ? `${abbr} ${SIGN_GLYPHS[sign] ?? sign}` : null;
+      })
+      .filter(Boolean);
+    if (outerParts.length) {
+      items.push(el("p", { class: "zodiac-line-outer-planets" }, [outerParts.join(" · ")]));
+    }
+  } else {
+    // No chart: fall back to manual moon/rising overrides only
+    const moon   = ch.zodiac?.moon;
+    const rising = ch.zodiac?.rising;
+    const extra  = [moon ? `Moon in ${moon}` : null, rising ? `Rising ${rising}` : null].filter(Boolean);
+    if (extra.length) items.push(el("p", { class: "sc-astro-extra" }, [extra.join(" · ")]));
   }
 
   return el("div", { class: "sc-body" }, items);
@@ -552,12 +638,13 @@ function editZodiac(ch, appData, persistNow, debouncedSave, done) {
   const sunSpan    = el("span", { class: "sheet-sun-display" }, [
     ch.zodiac?.sun ?? sunSignFromDate(ch.birthday) ?? "—",
   ]);
-  birthdayIn.addEventListener("input", () => {
+  birthdayIn.addEventListener("input", async () => {
     ch.birthday     = birthdayIn.value || null;
     ch.zodiac       ??= {};
     ch.zodiac.sun   = sunSignFromDate(ch.birthday);
     sunSpan.textContent = ch.zodiac.sun ?? "—";
-    debouncedSave();
+    await recomputeChartIfReady(ch, appData);
+    persistNow();
   });
 
   const moonSel    = signSelect(ch.zodiac?.moon);
@@ -586,9 +673,10 @@ function editZodiac(ch, appData, persistNow, debouncedSave, done) {
   // Birth time
   const timeInput = el("input", { type: "time", class: "sheet-input" });
   timeInput.value = ch.birthTime || "";
-  timeInput.addEventListener("change", () => {
+  timeInput.addEventListener("change", async () => {
     ch.birthTime = timeInput.value || null;
-    debouncedSave();
+    await recomputeChartIfReady(ch, appData);
+    persistNow();
   });
 
   // Birth city combobox with rebuild-in-place on "+ Add new city"
@@ -620,7 +708,7 @@ function editZodiac(ch, appData, persistNow, debouncedSave, done) {
           });
         } else {
           ch.birthCityId = value || null;
-          debouncedSave();
+          recomputeChartIfReady(ch, appData).then(() => persistNow());
         }
       },
     }));
@@ -1098,5 +1186,10 @@ export function mountCharacterSheet(container, appData, id) {
   window.addEventListener("current-date-change", onDateChange);
   window.addEventListener("route-change", onRouteChange);
 
-  show();
+  // Backfill chart for characters who have a birthday but no computed chart yet.
+  if (character.birthday && !character.natalChart) {
+    recomputeChartIfReady(character, appData).then(() => { persistNow(); show(); });
+  } else {
+    show();
+  }
 }

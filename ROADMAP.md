@@ -306,6 +306,18 @@ Followups:
 - 14a.4: full natal chart modal with glyph wheel.
 - `astronomia` (npm) is available in the main process but not directly importable in the sandboxed renderer; `astrology.js` uses pure-JS math instead. If higher precision is ever needed, wire up an IPC handler in main.js using `astronomia`.
 
+## Slice 14a.3: Auto-compute chart + Zodiac card summary
+
+Chart auto-computes when birthday, birth time, or birth city changes. Stored as `character.natalChart`. Existing characters with a birthday but no chart get backfilled on first page load. Zodiac card read-only view now shows: birthday, sun sign, birthplace line, Moon/Rising line (manual overrides win; Moon labeled "(approx.)" if birth time is missing), inner planets (Mercury Venus Mars with sign names), outer planets (Jup–Plu with sign glyphs).
+
+Prompt: `prompts/14a3-zodiac-summary.md`
+
+**Status: done** — 2026-06-21
+
+Followups:
+- 14a.4: full natal chart modal (aspects, houses, glyph wheel).
+- Manual moon/rising overrides in the edit form could show a note "(overriding computed <sign>)" for clarity.
+
 ## Slice 12: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.

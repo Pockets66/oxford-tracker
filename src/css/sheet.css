@@ -110,6 +110,28 @@
   margin: 0;
 }
 
+.zodiac-line-moon-rising {
+  color: var(--text);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+  margin: 0.4rem 0 0;
+}
+
+.zodiac-line-inner-planets,
+.zodiac-line-outer-planets {
+  color: var(--text-muted);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  margin: 0.3rem 0 0;
+}
+
+.zodiac-approx-note {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-style: italic;
+  margin-left: 0.2rem;
+}
+
 .sc-astro-birthplace {
   color: var(--text-muted);
   font-family: 'Inter', system-ui, sans-serif;
