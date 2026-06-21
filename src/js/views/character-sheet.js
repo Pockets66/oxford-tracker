@@ -159,12 +159,7 @@ function renderIdentityRO(ch, appData) {
     items.push(el("p", { class: "sc-line" }, [`Aliases: ${parts.join(", ")}`]));
   }
 
-  const ageParts = [];
-  if (age != null) ageParts.push(`Age ${age}`);
-  if (ch.birthday) ageParts.push(`Born ${formatLongDate(ch.birthday)}`);
-  if (ageParts.length) items.push(el("p", { class: "sc-line" }, [ageParts.join(" · ")]));
-
-  if (ch.placeOfBirth) items.push(el("p", { class: "sc-line" }, [ch.placeOfBirth]));
+  if (age != null) items.push(el("p", { class: "sc-line" }, [`Age ${age}`]));
 
   if (ch.deceased) {
     const deathStr = ch.deathDate ? formatLongDate(ch.deathDate) : null;
@@ -183,9 +178,10 @@ function renderZodiacRO(ch, appData) {
   const moon   = ch.zodiac?.moon;
   const rising = ch.zodiac?.rising;
 
-  if (!sun && !moon && !rising && !ch.birthTime && !ch.birthCityId) return scEmpty("No astrological data.");
+  if (!ch.birthday && !sun && !moon && !rising && !ch.birthTime && !ch.birthCityId) return scEmpty("No astrological data.");
 
   const items = [];
+  if (ch.birthday) items.push(el("p", { class: "sc-astro-birthday" }, [formatLongDate(ch.birthday)]));
   if (sun) items.push(el("p", { class: "sc-astro-sun" }, [sun]));
   const extra = [moon ? `Moon in ${moon}` : null, rising ? `Rising ${rising}` : null].filter(Boolean);
   if (extra.length) items.push(el("p", { class: "sc-astro-extra" }, [extra.join(" · ")]));
@@ -481,21 +477,12 @@ function editIdentity(ch, appData, debouncedSave, persistNow, done) {
   middleIn.addEventListener("input", () => { ch.middleName = middleIn.value; debouncedSave(); });
   lastIn.addEventListener("input",   () => { ch.lastName   = lastIn.value;   debouncedSave(); });
 
-  const birthdayIn = el("input", { type: "date", class: "sheet-input" });
-  birthdayIn.value = ch.birthday ?? "";
-
-  const sunDisplay = el("span", { class: "sheet-sun-display" }, [ch.zodiac?.sun ?? "—"]);
-
   const ageWrapper = el("label", { class: "sheet-label" }, ["Age"]);
   function refreshAge() {
     while (ageWrapper.childNodes.length > 1) ageWrapper.removeChild(ageWrapper.lastChild);
     if (ch.birthday) {
-      const age    = computeAge(ch, appData.meta?.currentDate);
-      const note   = ch.deathDate ? "at death" : "from birthday";
-      ageWrapper.append(
-        el("span", { class: "sheet-age-computed" }, [age != null ? String(age) : "?"]),
-        el("span", { class: "sheet-age-caption" }, [note]),
-      );
+      const age = computeAge(ch, appData.meta?.currentDate);
+      ageWrapper.append(el("span", { class: "sheet-age-computed" }, [age != null ? String(age) : "?"]));
     } else {
       const inp = el("input", { type: "number", class: "sheet-input sheet-input--narrow", placeholder: "Age", min: "0", max: "999" });
       inp.value = ch.age ?? "";
@@ -504,19 +491,6 @@ function editIdentity(ch, appData, debouncedSave, persistNow, done) {
     }
   }
   refreshAge();
-
-  birthdayIn.addEventListener("input", () => {
-    ch.birthday     = birthdayIn.value || null;
-    ch.zodiac       ??= {};
-    ch.zodiac.sun   = sunSignFromDate(ch.birthday);
-    sunDisplay.textContent = ch.zodiac.sun ?? "—";
-    refreshAge();
-    debouncedSave();
-  });
-
-  const placeIn = el("input", { type: "text", class: "sheet-input sheet-input--wide", placeholder: "Place of birth" });
-  placeIn.value = ch.placeOfBirth ?? "";
-  placeIn.addEventListener("input", () => { ch.placeOfBirth = placeIn.value; debouncedSave(); });
 
   const ownerSel = el("select", { class: "sheet-owner-select" });
   for (const o of OWNERS) {
@@ -563,24 +537,31 @@ function editIdentity(ch, appData, debouncedSave, persistNow, done) {
     makeNameList(ch, "aliases", "Aliases / codenames", debouncedSave, { withPrimary: true, withAka: true }),
     el("div", { class: "sheet-row" }, [
       ageWrapper,
-      el("label", { class: "sheet-label" }, ["Birthday", birthdayIn]),
-      el("label", { class: "sheet-label" }, ["Sun ☀", sunDisplay]),
-    ]),
-    deathRow,
-    el("div", { class: "sheet-row" }, [
-      el("label", { class: "sheet-label" }, ["Place of birth", placeIn]),
       el("label", { class: "sheet-label" }, ["Owner", ownerSel]),
       el("label", { class: "sheet-label sheet-label--inline" }, [deceasedCheck, " Deceased"]),
     ]),
+    deathRow,
     deleteBtn,
     makeDoneBtn(done),
   ]);
 }
 
 function editZodiac(ch, appData, persistNow, debouncedSave, done) {
-  const sun       = ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
-  const moonSel   = signSelect(ch.zodiac?.moon);
-  const risingSel = signSelect(ch.zodiac?.rising);
+  const birthdayIn = el("input", { type: "date", class: "sheet-input" });
+  birthdayIn.value = ch.birthday ?? "";
+  const sunSpan    = el("span", { class: "sheet-sun-display" }, [
+    ch.zodiac?.sun ?? sunSignFromDate(ch.birthday) ?? "—",
+  ]);
+  birthdayIn.addEventListener("input", () => {
+    ch.birthday     = birthdayIn.value || null;
+    ch.zodiac       ??= {};
+    ch.zodiac.sun   = sunSignFromDate(ch.birthday);
+    sunSpan.textContent = ch.zodiac.sun ?? "—";
+    debouncedSave();
+  });
+
+  const moonSel    = signSelect(ch.zodiac?.moon);
+  const risingSel  = signSelect(ch.zodiac?.rising);
 
   moonSel.addEventListener("change",   () => { ch.zodiac ??= {}; ch.zodiac.moon   = moonSel.value   || null; debouncedSave(); });
   risingSel.addEventListener("change", () => { ch.zodiac ??= {}; ch.zodiac.rising = risingSel.value || null; debouncedSave(); });
@@ -647,14 +628,12 @@ function editZodiac(ch, appData, persistNow, debouncedSave, done) {
   rebuildCityCombo();
 
   return el("div", { class: "sc-edit-form" }, [
-    el("label", { class: "sheet-label" }, [
-      "Sun ☀",
-      el("span", { class: "sheet-sun-display" }, [sun ?? "—"]),
-    ]),
-    toggleBtn,
-    extraBody,
+    el("label", { class: "sheet-label" }, ["Birthday", birthdayIn]),
     el("label", { class: "sheet-label" }, ["Birth time (optional)", timeInput]),
     el("label", { class: "sheet-label" }, ["Birth city", cityComboWrap]),
+    el("label", { class: "sheet-label" }, ["Sun ☀", sunSpan]),
+    toggleBtn,
+    extraBody,
     makeDoneBtn(done),
   ]);
 }

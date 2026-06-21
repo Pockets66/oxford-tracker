@@ -103,6 +103,13 @@
   margin: 0;
 }
 
+.sc-astro-birthday {
+  color: var(--text-muted);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
 .sc-astro-birthplace {
   color: var(--text-muted);
   font-family: 'Inter', system-ui, sans-serif;

@@ -293,6 +293,19 @@ Prompt: `prompts/14a1-birth-inputs.md`
 Followups:
 - Chart computation (slice 14a.2) will use `birthTime`, `birthCityId`, lat/lng, and timezone from meta.knownCities.
 
+## Slice 14a.2: Astrology compute utility + identity card cleanup
+
+Birthday moved from Identity card to Zodiac card (edit + read-only). Place-of-birth removed from Identity. `astronomia` npm package installed. `src/js/util/astrology.js` exports `computeNatalChart({ birthday, birthTime, lat, lng, timezone })` — pure-JS implementation using Meeus algorithms (Sun ~0.01°, Moon ~1°, planets ~1–2°, Placidus houses via RA trisection). `natalChart: null` added to `createCharacter()` schema defaults.
+
+Prompt: `prompts/14a2-astrology-compute.md`
+
+**Status: done** — 2026-06-21
+
+Followups:
+- 14a.3: call `computeNatalChart` when a character has all birth inputs; store result in `character.natalChart`; display in Zodiac card.
+- 14a.4: full natal chart modal with glyph wheel.
+- `astronomia` (npm) is available in the main process but not directly importable in the sandboxed renderer; `astrology.js` uses pure-JS math instead. If higher precision is ever needed, wire up an IPC handler in main.js using `astronomia`.
+
 ## Slice 12: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.
