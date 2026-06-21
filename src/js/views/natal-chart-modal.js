@@ -17,13 +17,18 @@ async function loadInterp() {
 
 // ── Formatting helpers ────────────────────────────────────────────────────────
 
+const VS = "︎"; // text presentation selector — prevents emoji rendering
+
 const BODY_GLYPHS = {
-  sun: "☉", moon: "☽", mercury: "☿", venus: "♀", mars: "♂",
-  jupiter: "♃", saturn: "♄", uranus: "♅", neptune: "♆", pluto: "♇",
+  sun:     "☉" + VS, moon:    "☽" + VS, mercury: "☿" + VS,
+  venus:   "♀" + VS, mars:    "♂" + VS,
+  jupiter: "♃" + VS, saturn:  "♄" + VS, uranus:  "♅" + VS,
+  neptune: "♆" + VS, pluto:   "♇" + VS,
 };
 
 const ASPECT_GLYPHS = {
-  Conjunction: "☌", Sextile: "⚹", Square: "☐", Trine: "△", Opposition: "☍",
+  Conjunction: "☌" + VS, Sextile: "⚹" + VS, Square: "☐" + VS,
+  Trine:       "△" + VS, Opposition: "☍" + VS,
 };
 
 const BODY_ORDER = [
@@ -162,8 +167,8 @@ function buildContent(character, appData) {
   const anglesSection = hasAngles
     ? el("div", {}, [
         el("div", { class: "natal-section-title" }, ["Angles"]),
-        angleRow("ascendant", "Ascendant", "↑", chart.angles.ascendant),
-        angleRow("midheaven", "Midheaven", "↗", chart.angles.midheaven),
+        angleRow("ascendant", "Ascendant", "↑" + VS, chart.angles.ascendant),
+        angleRow("midheaven", "Midheaven", "↗" + VS, chart.angles.midheaven),
       ].filter(Boolean))
     : null;
 

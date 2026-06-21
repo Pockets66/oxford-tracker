@@ -11,9 +11,13 @@ const OWNERS = ["Bree", "Jack", "Nicole", "Caiden", "NPC"];
 const SIGNS  = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo",
                  "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
 
+const VS = "︎"; // text presentation selector — prevents emoji rendering
+
 const SIGN_GLYPHS = {
-  Aries:"♈", Taurus:"♉", Gemini:"♊", Cancer:"♋", Leo:"♌", Virgo:"♍",
-  Libra:"♎", Scorpio:"♏", Sagittarius:"♐", Capricorn:"♑", Aquarius:"♒", Pisces:"♓",
+  Aries:       "♈" + VS, Taurus:  "♉" + VS, Gemini:      "♊" + VS,
+  Cancer:      "♋" + VS, Leo:     "♌" + VS, Virgo:       "♍" + VS,
+  Libra:       "♎" + VS, Scorpio: "♏" + VS, Sagittarius: "♐" + VS,
+  Capricorn:   "♑" + VS, Aquarius:"♒" + VS, Pisces:      "♓" + VS,
 };
 
 const OUTER_PLANETS = [
