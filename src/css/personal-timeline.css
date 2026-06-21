@@ -88,32 +88,6 @@
   color: var(--accent);
 }
 
-/* ── vis-timeline item overrides ── */
-.ptl-birth.vis-item {
-  background-color: var(--success, #3d7a4a);
-  border-color: var(--success, #3d7a4a);
-  color: #fff;
-}
-
-.ptl-death.vis-item {
-  background-color: var(--text-muted);
-  border-color: var(--text-muted);
-  color: var(--bg);
-}
-
-.ptl-event-item.vis-item {
-  background-color: var(--accent);
-  border-color: var(--accent);
-  color: #fff;
-  cursor: pointer;
-}
-
-.ptl-scene-item.vis-item {
-  color: #fff;
-  cursor: pointer;
-  opacity: 0.9;
-}
-
 /* ── Date dialog helpers ── */
 .ptl-precision-sel {
   max-width: 120px;

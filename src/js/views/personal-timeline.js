@@ -3,6 +3,7 @@ import { displayName } from "../schema.js";
 import { formatFlexibleDate, flexibleDateSortKey } from "../dates.js";
 import { navigate } from "../router.js";
 import { openTimelineEventDialog } from "./timeline-event-dialog.js";
+import { getTypeSettings, itemContent } from "../util/timeline-settings.js";
 
 export function openPersonalTimeline(characterId, appData) {
   const character = appData.characters.find(c => c.id === characterId);
@@ -163,16 +164,18 @@ export function openPersonalTimeline(characterId, appData) {
       const DataSet   = visModule.DataSet;
 
       const items = [];
+      const ts = getTypeSettings(appData);
 
       if (character.birthday) {
         const d = toJsDate(character.birthday);
         if (d) {
           items.push({
             id:        "birth",
-            content:   `${displayName(character)} born`,
+            content:   itemContent(ts.births.symbol, ts.births.color, `${displayName(character)} born`),
             start:     d,
-            type:      "point",
-            className: "ptl-birth",
+            type:      "box",
+            className: "gtl-item-base",
+            style:     "",
           });
         }
       }
@@ -182,10 +185,11 @@ export function openPersonalTimeline(characterId, appData) {
         if (d) {
           items.push({
             id:        "death",
-            content:   "Died",
+            content:   itemContent(ts.deaths.symbol, ts.deaths.color, `${displayName(character)} died`),
             start:     d,
-            type:      "point",
-            className: "ptl-death",
+            type:      "box",
+            className: "gtl-item-base",
+            style:     "",
           });
         }
       }
@@ -193,12 +197,14 @@ export function openPersonalTimeline(characterId, appData) {
       for (const ev of charEvents()) {
         const d = toJsDate(ev.date);
         if (!d) continue;
+        const sym = ev.symbol || ts.events.symbol;
         items.push({
           id:        ev.id,
-          content:   ev.title || "(untitled)",
+          content:   itemContent(sym, ts.events.color, ev.title || "(untitled)"),
           start:     d,
           type:      "box",
-          className: "ptl-event-item",
+          className: "gtl-item-base",
+          style:     "",
         });
       }
 
@@ -208,14 +214,14 @@ export function openPersonalTimeline(characterId, appData) {
         const plotline = (appData.plotlines ?? []).find(
           pl => (sc.plotlineIds ?? []).includes(pl.id),
         );
-        const color = plotline?.color ?? "#4a6b8a";
+        const color = plotline?.color ?? ts.scenes.color;
         items.push({
           id:        `scene:${sc.id}`,
-          content:   sc.title || "(untitled scene)",
+          content:   itemContent(ts.scenes.symbol, color, sc.title || "(untitled scene)"),
           start:     d,
           type:      "box",
-          className: "ptl-scene-item",
-          style:     `background-color: ${color}; border-color: ${color};`,
+          className: "gtl-item-base",
+          style:     "",
         });
       }
 

@@ -174,7 +174,8 @@ async function init() {
       needMetaSave = true;
     }
 
-    appData.meta.knownLanguages ??= [];
+    appData.meta.knownLanguages       ??= [];
+    appData.meta.timelineTypeSettings ??= {};
     appData.secrets        ??= [];
     appData.scenes         ??= [];
     appData.plotlines      ??= [];

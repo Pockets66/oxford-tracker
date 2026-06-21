@@ -2,17 +2,19 @@ import { el, clear } from "../dom.js";
 import { displayName, anomalyOverallClass } from "../schema.js";
 import { formatFlexibleDate } from "../dates.js";
 import { navigate } from "../router.js";
+import { save } from "../storage.js";
 import { openTimelineEventDialog } from "./timeline-event-dialog.js";
+import { openTimelineItemPanel } from "./timeline-item-panel.js";
+import {
+  ALL_TIMELINE_KINDS, SYMBOLS, getTypeSettings, itemContent,
+} from "../util/timeline-settings.js";
 
-const CLASS_COLORS = {
-  "I":    "#4a1a1a", "II":   "#7a1f1f", "III":  "#9a3520",
-  "IV":   "#a85a1f", "V":    "#b88a2a", "VI":   "#8a7a3a",
-  "VII":  "#4a6a6a", "VIII": "#5a8a9a", "IX":   "#6a9ac0",
-  "X":    "#a0c0d8",
+export const ALL_KINDS = ALL_TIMELINE_KINDS;
+
+const KIND_LABELS = {
+  scenes: "Scenes", events: "Events", births: "Births",
+  deaths: "Deaths", anomalies: "Anomalies",
 };
-const LIGHT_CLASS = new Set(["IX", "X"]);
-
-// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function chipTextColor(hex) {
   if (!hex || hex.length < 7) return "#f4ecd8";
@@ -37,9 +39,10 @@ function toVisItem(item) {
     content:   item.content,
     title:     item.tooltip,
     start:     item.start,
-    type:      item.type,
-    className: item.className,
-    style:     item.style,
+    type:      "box",
+    className: "gtl-item-base",
+    style:     "",
+    group:     item.kind,
   };
 }
 
@@ -47,8 +50,8 @@ function toVisItem(item) {
 
 function buildAllItems(appData) {
   const items = [];
+  const ts    = getTypeSettings(appData);
 
-  // Index: character id → factionIds
   const charFactionIds = new Map();
   for (const c of appData.characters ?? []) charFactionIds.set(c.id, c.factionIds ?? []);
 
@@ -63,33 +66,17 @@ function buildAllItems(appData) {
     if (!sc.sceneDate) continue;
     const d = toJsDate(sc.sceneDate);
     if (!d) continue;
-
-    const plotline = (appData.plotlines ?? []).find(pl => (sc.plotlineIds ?? []).includes(pl.id));
-
-    let className, style;
-    if (plotline) {
-      className = "gtl-scene-plotline";
-      style     = `background-color: ${plotline.color}; border-color: ${plotline.color}; color: ${chipTextColor(plotline.color)};`;
-    } else if (sc.status === "Complete") {
-      className = "gtl-scene-complete";
-      style     = "";
-    } else if (sc.status === "In progress") {
-      className = "gtl-scene-inprogress";
-      style     = "";
-    } else {
-      className = "gtl-scene-draft";
-      style     = "";
-    }
-
+    const color  = sc.color  || ts.scenes.color;
+    const symbol = sc.symbol || ts.scenes.symbol;
     const charIds   = (sc.characters ?? []).map(r => r.characterId);
     const charNames = charIds.slice(0, 3).map(cId => {
       const c = (appData.characters ?? []).find(x => x.id === cId);
       return c ? displayName(c) : null;
     }).filter(Boolean);
-
     items.push({
       id:           `scene:${sc.id}`,
-      content:      sc.title || "(untitled scene)",
+      label:        sc.title || "(untitled scene)",
+      content:      itemContent(symbol, color, sc.title || "(untitled scene)"),
       tooltip:      [
         `<b>${sc.title || "(untitled scene)"}</b>`,
         formatFlexibleDate(sc.sceneDate),
@@ -97,11 +84,8 @@ function buildAllItems(appData) {
         charNames.length ? charNames.join(", ") : null,
       ].filter(Boolean).join("<br>"),
       start:        d,
-      type:         "box",
-      className,
-      style,
+      dateRaw:      sc.sceneDate,
       kind:         "scenes",
-      status:       sc.status ?? "Draft",
       sceneId:      sc.id,
       characterIds: charIds,
       factionIds:   effectiveFactions(charIds, sc.factionIds ?? []),
@@ -113,23 +97,23 @@ function buildAllItems(appData) {
   for (const ev of appData.timelineEvents ?? []) {
     const d = toJsDate(ev.date);
     if (!d) continue;
+    const color  = ev.color || ts.events.color;
+    const symbol = ev.symbol || ts.events.symbol;
     const charNames = (ev.characterIds ?? []).slice(0, 3).map(cId => {
       const c = (appData.characters ?? []).find(x => x.id === cId);
       return c ? displayName(c) : null;
     }).filter(Boolean);
-
     items.push({
       id:           `event:${ev.id}`,
-      content:      ev.title || "(untitled event)",
+      label:        ev.title || "(untitled event)",
+      content:      itemContent(symbol, color, ev.title || "(untitled event)"),
       tooltip:      [
         `<b>${ev.title || "(untitled event)"}</b>`,
         ev.date ? formatFlexibleDate(ev.date) : null,
         charNames.length ? charNames.join(", ") : null,
       ].filter(Boolean).join("<br>"),
       start:        d,
-      type:         "box",
-      className:    "gtl-event",
-      style:        "",
+      dateRaw:      ev.date,
       kind:         "events",
       eventId:      ev.id,
       characterIds: ev.characterIds ?? [],
@@ -143,14 +127,15 @@ function buildAllItems(appData) {
     if (!ch.birthday) continue;
     const d = toJsDate(ch.birthday);
     if (!d) continue;
+    const color  = ch.birthColor  || ts.births.color;
+    const symbol = ch.birthSymbol || ts.births.symbol;
     items.push({
       id:           `birth:${ch.id}`,
-      content:      `${displayName(ch)} born`,
+      label:        `${displayName(ch)} born`,
+      content:      itemContent(symbol, color, `${displayName(ch)} born`),
       tooltip:      `<b>${displayName(ch)}</b><br>${formatFlexibleDate(ch.birthday)}<br>Born`,
       start:        d,
-      type:         "point",
-      className:    "gtl-birth",
-      style:        "",
+      dateRaw:      ch.birthday,
       kind:         "births",
       characterId:  ch.id,
       characterIds: [ch.id],
@@ -164,14 +149,15 @@ function buildAllItems(appData) {
     if (!ch.deathDate) continue;
     const d = toJsDate(ch.deathDate);
     if (!d) continue;
+    const color  = ch.deathColor  || ts.deaths.color;
+    const symbol = ch.deathSymbol || ts.deaths.symbol;
     items.push({
       id:           `death:${ch.id}`,
-      content:      `${displayName(ch)} died`,
+      label:        `${displayName(ch)} died`,
+      content:      itemContent(symbol, color, `${displayName(ch)} died`),
       tooltip:      `<b>${displayName(ch)}</b><br>${formatFlexibleDate(ch.deathDate)}<br>Died`,
       start:        d,
-      type:         "point",
-      className:    "gtl-death",
-      style:        "",
+      dateRaw:      ch.deathDate,
       kind:         "deaths",
       characterId:  ch.id,
       characterIds: [ch.id],
@@ -180,31 +166,30 @@ function buildAllItems(appData) {
     });
   }
 
-  // Anomaly discovery dates + observations
+  // Anomalies
   for (const a of appData.anomalies ?? []) {
     if (a.archived) continue;
-    const overall   = anomalyOverallClass(a);
-    const color     = overall ? (CLASS_COLORS[overall] ?? "#4a6a6a") : "#4a6a6a";
-    const textColor = overall && LIGHT_CLASS.has(overall) ? "#2a1f15" : "#f4ecd8";
-    const aCharIds  = a.characterIds ?? [];
-    const aPl       = a.plotlineIds  ?? [];
+    const color  = a.color  || ts.anomalies.color;
+    const symbol = a.symbol || ts.anomalies.symbol;
+    const aCharIds = a.characterIds ?? [];
+    const aPl      = a.plotlineIds  ?? [];
+    const overall  = anomalyOverallClass(a);
 
     if (a.discoveryDate) {
       const d = toJsDate(a.discoveryDate);
       if (d) {
         items.push({
           id:           `anomaly:${a.id}`,
-          content:      a.title || "(unnamed anomaly)",
+          label:        a.title || "(unnamed anomaly)",
+          content:      itemContent(symbol, color, a.title || "(unnamed anomaly)"),
           tooltip:      [
             `<b>${a.title || "(unnamed anomaly)"}</b>`,
             `Discovered: ${formatFlexibleDate(a.discoveryDate)}`,
             overall ? `Class ${overall}` : null,
-            a.status ? a.status : null,
+            a.status || null,
           ].filter(Boolean).join("<br>"),
           start:        d,
-          type:         "box",
-          className:    "gtl-anomaly",
-          style:        `background-color:${color};border-color:${color};color:${textColor};`,
+          dateRaw:      a.discoveryDate,
           kind:         "anomalies",
           anomalyId:    a.id,
           characterIds: aCharIds,
@@ -220,17 +205,16 @@ function buildAllItems(appData) {
       if (!d) continue;
       items.push({
         id:           `anomaly-obs:${a.id}:${obs.id}`,
-        content:      `${a.title || "(unnamed)"}: ${obs.title || "(observation)"}`,
+        label:        `${a.title || "(unnamed)"}: ${obs.title || "(observation)"}`,
+        content:      itemContent(symbol, color, `${a.title || "(unnamed)"}: ${obs.title || "(observation)"}`),
         tooltip:      [
           `<b>${a.title || "(unnamed)"}</b>`,
           obs.date ? formatFlexibleDate(obs.date) : null,
-          obs.title  || null,
-          obs.body   || null,
+          obs.title || null,
+          obs.body  || null,
         ].filter(Boolean).join("<br>"),
         start:        d,
-        type:         "point",
-        className:    "gtl-anomaly-obs",
-        style:        `color:${color};border-color:${color};`,
+        dateRaw:      obs.date,
         kind:         "anomalies",
         anomalyId:    a.id,
         characterIds: aCharIds,
@@ -243,21 +227,19 @@ function buildAllItems(appData) {
   return items;
 }
 
-// ── Filter state ──────────────────────────────────────────────────────────────
+// ── State ─────────────────────────────────────────────────────────────────────
 
-export const ALL_KINDS    = ["scenes", "events", "births", "deaths", "anomalies"];
-export const ALL_STATUSES = ["Draft", "In progress", "Complete"];
-const PERSIST_KEY         = "global-timeline";
+const PERSIST_KEY = "global-timeline";
 
 export function defaultState() {
   return {
     kinds:      [...ALL_KINDS],
-    statuses:   [...ALL_STATUSES],
     characters: [],
     factions:   [],
     plotlines:  [],
     dateFrom:   "",
     dateTo:     "",
+    collapsed:  [],
   };
 }
 
@@ -267,12 +249,12 @@ function loadState() {
     if (s) {
       return {
         kinds:      Array.isArray(s.kinds)      ? s.kinds      : [...ALL_KINDS],
-        statuses:   Array.isArray(s.statuses)   ? s.statuses   : [...ALL_STATUSES],
         characters: Array.isArray(s.characters) ? s.characters : [],
         factions:   Array.isArray(s.factions)   ? s.factions   : [],
         plotlines:  Array.isArray(s.plotlines)  ? s.plotlines  : [],
-        dateFrom:   s.dateFrom ?? "",
-        dateTo:     s.dateTo   ?? "",
+        dateFrom:   s.dateFrom  ?? "",
+        dateTo:     s.dateTo    ?? "",
+        collapsed:  Array.isArray(s.collapsed)  ? s.collapsed  : [],
       };
     }
   } catch {}
@@ -285,19 +267,19 @@ function persistState(state) {
 
 function isModified(state) {
   const def = defaultState();
-  return state.kinds.length      < def.kinds.length
-    || state.statuses.length     < def.statuses.length
-    || state.characters.length   > 0
-    || state.factions.length     > 0
-    || state.plotlines.length    > 0
-    || state.dateFrom            !== ""
-    || state.dateTo              !== "";
+  return state.kinds.length    < def.kinds.length
+    || state.characters.length > 0
+    || state.factions.length   > 0
+    || state.plotlines.length  > 0
+    || state.dateFrom          !== ""
+    || state.dateTo            !== "";
 }
 
 function applyFilters(items, state) {
+  const collapsedSet = new Set(state.collapsed);
   let r = items;
   if (state.kinds.length < ALL_KINDS.length) r = r.filter(i => state.kinds.includes(i.kind));
-  if (state.statuses.length < ALL_STATUSES.length) r = r.filter(i => i.kind !== "scene" || state.statuses.includes(i.status));
+  r = r.filter(i => !collapsedSet.has(i.kind));
   if (state.characters.length) r = r.filter(i => state.characters.some(c => i.characterIds.includes(c)));
   if (state.factions.length)   r = r.filter(i => state.factions.some(f => i.factionIds.includes(f)));
   if (state.plotlines.length)  r = r.filter(i => state.plotlines.some(p => i.plotlineIds.includes(p)));
@@ -306,23 +288,41 @@ function applyFilters(items, state) {
   return r;
 }
 
+// List version: same but ignores collapsed (list always shows all enabled types)
+function applyListFilters(items, state) {
+  let r = items;
+  if (state.kinds.length < ALL_KINDS.length) r = r.filter(i => state.kinds.includes(i.kind));
+  if (state.characters.length) r = r.filter(i => state.characters.some(c => i.characterIds.includes(c)));
+  if (state.factions.length)   r = r.filter(i => state.factions.some(f => i.factionIds.includes(f)));
+  if (state.plotlines.length)  r = r.filter(i => state.plotlines.some(p => i.plotlineIds.includes(p)));
+  if (state.dateFrom) { const d = toJsDate(state.dateFrom); if (d) r = r.filter(i => i.start >= d); }
+  if (state.dateTo)   { const d = toJsDate(state.dateTo);   if (d) r = r.filter(i => i.start <= d); }
+  return r;
+}
+
+function groupContent(kind, isCollapsed) {
+  const arrow = isCollapsed ? "▸" : "▾";
+  return `<span class="gtl-grp-toggle" data-group-id="${kind}">${arrow} ${KIND_LABELS[kind]}</span>`;
+}
+
 // ── Mount ─────────────────────────────────────────────────────────────────────
 
 export async function mountGlobalTimeline(container, appData) {
   const mainEl = document.querySelector("#main");
   mainEl.classList.add("gtl-main");
 
-  let tlInstance  = null;
-  let dataset     = null;
-  let allItems    = buildAllItems(appData);
-  let state       = loadState();
+  let tlInstance = null;
+  let dataset    = null;
+  let groupsDS   = null;
+  let allItems   = buildAllItems(appData);
+  let state      = loadState();
+  let listSearch = "";
 
   function onDateChange(e) {
     if (!tlInstance) return;
     try { tlInstance.setCustomTime(new Date(e.detail.date), "now"); } catch (_) {}
   }
   window.addEventListener("current-date-change", onDateChange);
-
   window.addEventListener("route-change", function onLeave() {
     window.removeEventListener("route-change", onLeave);
     window.removeEventListener("current-date-change", onDateChange);
@@ -330,20 +330,44 @@ export async function mountGlobalTimeline(container, appData) {
     mainEl.classList.remove("gtl-main");
   });
 
-  // ── DOM ───────────────────────────────────────────────────────────────────────
+  // ── DOM skeleton ──────────────────────────────────────────────────────────────
 
-  const toolbarEl = el("div", { class: "gtl-toolbar" });
-  const canvasEl  = el("div", { class: "gtl-canvas" });
-  const popoverEl = el("div", { class: "filter-popover gtl-popover" });
-  container.append(el("div", { class: "gtl-container" }, [toolbarEl, canvasEl, popoverEl]));
+  const topbarEl      = el("div", { class: "gtl-topbar" });
+  const visSectionEl  = el("div", { class: "gtl-vis-section" });
+  const canvasEl      = el("div", { class: "gtl-canvas" });
+  const sidebarEl     = el("div", { class: "gtl-sidebar" });
+  const listPaneEl    = el("div", { class: "gtl-list-pane" });
+  const listBodyEl    = el("div", { class: "gtl-list-body" });
+  const popoverEl     = el("div", { class: "filter-popover gtl-popover" });
+  const settingsPopEl = el("div", { class: "filter-popover gtl-settings-pop" });
 
-  // ── Dataset helpers ───────────────────────────────────────────────────────────
+  visSectionEl.append(canvasEl, popoverEl, settingsPopEl);
+  const bottomEl = el("div", { class: "gtl-bottom" }, [sidebarEl, listPaneEl]);
+  container.append(el("div", { class: "gtl-container" }, [topbarEl, visSectionEl, bottomEl]));
+
+  // ── Vis / dataset helpers ─────────────────────────────────────────────────────
+
+  let clearBtn = null;
 
   function refreshDataset() {
     if (!dataset) return;
     dataset.clear();
     dataset.add(applyFilters(allItems, state).map(toVisItem));
     if (clearBtn) clearBtn.style.display = isModified(state) ? "" : "none";
+    renderEventList();
+  }
+
+  function refreshGroups() {
+    if (!groupsDS) return;
+    const collapsedSet = new Set(state.collapsed);
+    for (const kind of ALL_KINDS) {
+      groupsDS.update({
+        id:      kind,
+        content: groupContent(kind, collapsedSet.has(kind)),
+        visible: state.kinds.includes(kind),
+      });
+    }
+    refreshKindBtns();
   }
 
   function rebuildItems() {
@@ -351,19 +375,152 @@ export async function mountGlobalTimeline(container, appData) {
     refreshDataset();
   }
 
+  function toggleCollapse(kind) {
+    const collapsedSet = new Set(state.collapsed);
+    if (collapsedSet.has(kind)) collapsedSet.delete(kind);
+    else collapsedSet.add(kind);
+    state.collapsed = [...collapsedSet];
+    persistState(state);
+    refreshGroups();
+    refreshDataset();
+  }
+
+  // ── Event list ────────────────────────────────────────────────────────────────
+
+  function renderEventList() {
+    clear(listBodyEl);
+    const q = listSearch.toLowerCase().trim();
+    let items = applyListFilters(allItems, state);
+    if (q) items = items.filter(i => i.label.toLowerCase().includes(q));
+    items = [...items].sort((a, b) => a.start - b.start);
+
+    const ts = getTypeSettings(appData);
+
+    if (!items.length) {
+      listBodyEl.append(el("div", { class: "gtl-list-empty" }, [
+        q ? "No events match your search." : "No events to show.",
+      ]));
+      return;
+    }
+
+    for (const item of items) {
+      const typeSettings = ts[item.kind];
+      const dateStr = item.dateRaw ? formatFlexibleDate(item.dateRaw) : "";
+
+      const symEl = el("span", { class: "gtl-list-sym" }, [typeSettings.symbol]);
+      symEl.style.color = typeSettings.color;
+
+      const rowChildren = [
+        symEl,
+        el("span", { class: "gtl-list-title" }, [item.label]),
+        el("span", { class: "gtl-list-date" }, [dateStr]),
+        el("span", { class: "gtl-list-kind" }, [KIND_LABELS[item.kind]]),
+      ];
+
+      // Events get an "Edit" button that opens the edit panel.
+      // Other types get a "↗" navigate button; their card opens on row click.
+      if (item.kind === "events") {
+        const editBtn = el("button", { class: "btn-small gtl-list-edit" }, ["Edit"]);
+        editBtn.addEventListener("click", e => {
+          e.stopPropagation();
+          openTimelineItemPanel({
+            item,
+            appData,
+            containerEl: listPaneEl,
+            onSave:   rebuildItems,
+            onDelete: rebuildItems,
+          });
+        });
+        rowChildren.push(editBtn);
+      } else {
+        let navRoute = null;
+        if (item.kind === "scenes")                                 navRoute = `scenes/${item.sceneId}`;
+        else if (item.kind === "anomalies")                        navRoute = `anomalies/${item.anomalyId}`;
+        else if (item.kind === "births" || item.kind === "deaths") navRoute = `characters/${item.characterId}`;
+        if (navRoute) {
+          const navBtn = el("button", { class: "btn-small gtl-list-nav" }, ["↗"]);
+          navBtn.title = "Open page";
+          navBtn.addEventListener("click", e => {
+            e.stopPropagation();
+            navigate(navRoute);
+          });
+          rowChildren.push(navBtn);
+        }
+      }
+
+      const row = el("div", { class: "gtl-list-row" }, rowChildren);
+      row.addEventListener("click", () => {
+        // Zoom the timeline to this item
+        if (tlInstance) {
+          if (!state.kinds.includes(item.kind)) {
+            state.kinds = [...state.kinds, item.kind];
+            persistState(state);
+            refreshGroups();
+            refreshDataset();
+          }
+          const DAY = 24 * 60 * 60 * 1000;
+          tlInstance.setWindow(
+            new Date(item.start.getTime() - 45 * DAY),
+            new Date(item.start.getTime() + 45 * DAY),
+            { animation: { duration: 400, easingFunction: "easeInOutQuad" } },
+          );
+        }
+        // Also open the card panel for non-event items (events use the Edit button)
+        if (item.kind !== "events") {
+          openTimelineItemPanel({
+            item,
+            appData,
+            containerEl: listPaneEl,
+            onSave:   rebuildItems,
+            onDelete: rebuildItems,
+          });
+        }
+      });
+
+      listBodyEl.append(row);
+    }
+  }
+
+  // ── Time range presets ────────────────────────────────────────────────────────
+
+  const currentDate = appData.meta?.currentDate;
+
+  function setTimeWindow(preset) {
+    if (!tlInstance) return;
+    if (preset === "all") { tlInstance.fit(); return; }
+    const center = currentDate ? new Date(currentDate) : new Date();
+    const DAY = 24 * 60 * 60 * 1000;
+    const OFFSETS = { "1M": 15, "3M": 45, "6M": 91, "1Y": 182, "5Y": 912 };
+    const offset = (OFFSETS[preset] ?? 91) * DAY;
+    tlInstance.setWindow(
+      new Date(center.getTime() - offset),
+      new Date(center.getTime() + offset),
+      { animation: false },
+    );
+  }
+
   // ── Build vis-timeline ────────────────────────────────────────────────────────
 
   if (!allItems.length) {
     canvasEl.append(el("div", { class: "placeholder-view" }, [
-      "No dated items yet. Add scene dates, character birthdays, or events from other tabs to populate the timeline.",
+      "No dated items yet. Add scene dates, character birthdays, or events to populate the timeline.",
     ]));
   } else {
     try {
       const { Timeline, DataSet } = await import("../../vendor/vis-timeline.esm.min.js");
 
+      const collapsedSet = new Set(state.collapsed);
+
+      groupsDS = new DataSet(ALL_KINDS.map((kind, idx) => ({
+        id:      kind,
+        content: groupContent(kind, collapsedSet.has(kind)),
+        visible: state.kinds.includes(kind),
+        order:   idx,
+      })));
+
       dataset = new DataSet(applyFilters(allItems, state).map(toVisItem));
 
-      tlInstance = new Timeline(canvasEl, dataset, {
+      tlInstance = new Timeline(canvasEl, dataset, groupsDS, {
         height:          "100%",
         stack:           true,
         editable:        { add: false, updateTime: false, updateGroup: false, remove: false },
@@ -371,104 +528,104 @@ export async function mountGlobalTimeline(container, appData) {
         moveable:        true,
         showCurrentTime: false,
         selectable:      true,
+        groupOrder:      "order",
       });
 
-      const currentDate = appData.meta?.currentDate;
       if (currentDate) {
-        const center     = new Date(currentDate);
-        const sixMonths  = 180 * 24 * 60 * 60 * 1000;
-        tlInstance.setWindow(new Date(center.getTime() - sixMonths), new Date(center.getTime() + sixMonths));
+        const center    = new Date(currentDate);
+        const ninetyDay = 91 * 24 * 60 * 60 * 1000;
+        tlInstance.setWindow(
+          new Date(center.getTime() - ninetyDay),
+          new Date(center.getTime() + ninetyDay),
+        );
         try { tlInstance.addCustomTime(center, "now"); } catch (_) {}
       }
+
+      // Capture phase fires before vis-timeline's own bubble-phase handlers,
+      // ensuring our collapse toggle always fires even if vis stops propagation.
+      canvasEl.addEventListener("click", e => {
+        const toggle = e.target.closest("[data-group-id]");
+        if (!toggle) return;
+        toggleCollapse(toggle.dataset.groupId);
+      }, true);
 
       tlInstance.on("click", props => {
         if (!props.item) return;
         const raw  = String(props.item);
         const item = allItems.find(i => String(i.id) === raw);
         if (!item) return;
-
-        if (item.kind === "scenes") {
-          navigate(`scenes/${item.sceneId}`);
-        } else if (item.kind === "births" || item.kind === "deaths") {
-          navigate(`characters/${item.characterId}`);
-        } else if (item.kind === "anomalies") {
-          navigate(`anomalies/${item.anomalyId}`);
-        } else if (item.kind === "events") {
-          const ev = (appData.timelineEvents ?? []).find(e => e.id === item.eventId);
-          if (!ev) return;
-          openTimelineEventDialog({
-            existingEvent: ev,
-            characterId:   null,
-            appData,
-            onSave:   rebuildItems,
-            onDelete: rebuildItems,
-            onClose:  () => {},
-          });
-        }
+        openTimelineItemPanel({
+          item,
+          appData,
+          containerEl: listPaneEl,
+          onSave:   rebuildItems,
+          onDelete: rebuildItems,
+        });
       });
     } catch (err) {
       canvasEl.append(el("p", { class: "gtl-error" }, [`Timeline unavailable: ${err.message}`]));
     }
   }
 
-  // ── Toolbar (CP2) ─────────────────────────────────────────────────────────────
+  // ── Type settings popover ─────────────────────────────────────────────────────
 
-  // "Add event" button
-  const addEvtBtn = el("button", { class: "btn-small gtl-add-btn" }, ["+ Add event"]);
-  addEvtBtn.addEventListener("click", () => {
-    openTimelineEventDialog({
-      existingEvent: null,
-      characterId:   null,
-      appData,
-      onSave:  rebuildItems,
-      onClose: () => {},
-    });
-  });
+  function renderSettingsPop() {
+    clear(settingsPopEl);
+    const ts = getTypeSettings(appData);
+    settingsPopEl.append(el("div", { class: "gtl-settings-header" }, ["Event type appearance"]));
 
-  // "Clear filters" link
-  let clearBtn = null;
-  clearBtn = el("button", { class: "btn-link filter-clear-btn" }, ["Clear filters"]);
-  clearBtn.style.display = isModified(state) ? "" : "none";
+    for (const kind of ALL_KINDS) {
+      const { color, symbol } = ts[kind];
 
-  // Kind toggle chips
-  const KIND_LABELS = { scenes: "Scenes", events: "Events", births: "Births", deaths: "Deaths", anomalies: "Anomalies" };
-  const kindBtns = ALL_KINDS.map(kind => {
-    const btn = el("button", { class: "gtl-kind-toggle" }, [KIND_LABELS[kind]]);
-    btn.classList.toggle("is-active", state.kinds.includes(kind));
-    btn.addEventListener("click", () => {
-      if (state.kinds.includes(kind)) {
-        if (state.kinds.length === 1) return;
-        state.kinds = state.kinds.filter(k => k !== kind);
-      } else {
-        state.kinds = [...state.kinds, kind];
+      const colorInput = el("input", { type: "color", class: "gtl-type-color", value: color });
+      colorInput.addEventListener("change", () => {
+        appData.meta.timelineTypeSettings ??= {};
+        appData.meta.timelineTypeSettings[kind] = {
+          ...(appData.meta.timelineTypeSettings[kind] ?? {}),
+          color: colorInput.value,
+        };
+        save("meta", appData.meta);
+        rebuildItems();
+        refreshKindBtns();
+      });
+
+      const symbolSel = el("select", { class: "gtl-type-symbol sheet-input" });
+      for (const sym of SYMBOLS) {
+        const opt = el("option", { value: sym.value }, [sym.label]);
+        if (sym.value === symbol) opt.selected = true;
+        symbolSel.append(opt);
       }
-      btn.classList.toggle("is-active", state.kinds.includes(kind));
-      persistState(state);
-      refreshDataset();
-    });
-    return btn;
-  });
+      symbolSel.addEventListener("change", () => {
+        appData.meta.timelineTypeSettings ??= {};
+        appData.meta.timelineTypeSettings[kind] = {
+          ...(appData.meta.timelineTypeSettings[kind] ?? {}),
+          symbol: symbolSel.value,
+        };
+        save("meta", appData.meta);
+        rebuildItems();
+        refreshKindBtns();
+      });
 
-  // Status toggle chips
-  const statusBtns = ALL_STATUSES.map(status => {
-    const slug = status === "In progress" ? "inprogress" : status.toLowerCase();
-    const btn  = el("button", { class: `gtl-status-toggle gtl-status--${slug}` }, [status]);
-    btn.classList.toggle("is-active", state.statuses.includes(status));
-    btn.addEventListener("click", () => {
-      if (state.statuses.includes(status)) {
-        if (state.statuses.length === 1) return;
-        state.statuses = state.statuses.filter(s => s !== status);
-      } else {
-        state.statuses = [...state.statuses, status];
-      }
-      btn.classList.toggle("is-active", state.statuses.includes(status));
-      persistState(state);
-      refreshDataset();
-    });
-    return btn;
-  });
+      settingsPopEl.append(el("div", { class: "gtl-type-row" }, [
+        el("span", { class: "gtl-type-name" }, [KIND_LABELS[kind]]),
+        colorInput,
+        symbolSel,
+      ]));
+    }
 
-  // Character filter
+    const resetBtn = el("button", { class: "btn-small gtl-type-reset" }, ["Reset defaults"]);
+    resetBtn.addEventListener("click", () => {
+      appData.meta.timelineTypeSettings = {};
+      save("meta", appData.meta);
+      rebuildItems();
+      renderSettingsPop();
+      refreshKindBtns();
+    });
+    settingsPopEl.append(resetBtn);
+  }
+
+  // ── Filter popover ────────────────────────────────────────────────────────────
+
   const charChipsEl = el("div", { class: "filter-faction-chips" });
   function renderCharChips() {
     clear(charChipsEl);
@@ -497,7 +654,6 @@ export async function mountGlobalTimeline(container, appData) {
   });
   renderCharChips();
 
-  // Faction filter
   const factionChipsEl = el("div", { class: "filter-faction-chips" });
   function renderFactionChips() {
     clear(factionChipsEl);
@@ -528,7 +684,6 @@ export async function mountGlobalTimeline(container, appData) {
   });
   renderFactionChips();
 
-  // Plotline filter
   const plotlineChipsEl = el("div", { class: "filter-faction-chips" });
   function renderPlotlineChips() {
     clear(plotlineChipsEl);
@@ -559,16 +714,20 @@ export async function mountGlobalTimeline(container, appData) {
   });
   renderPlotlineChips();
 
-  // Date range
   const dateFromInput = el("input", { type: "date", class: "gtl-date-input", title: "From date" });
   dateFromInput.value = state.dateFrom;
-  dateFromInput.addEventListener("change", () => { state.dateFrom = dateFromInput.value; persistState(state); refreshDataset(); });
+  dateFromInput.addEventListener("change", () => {
+    state.dateFrom = dateFromInput.value;
+    persistState(state); refreshDataset();
+  });
 
   const dateToInput = el("input", { type: "date", class: "gtl-date-input", title: "To date" });
   dateToInput.value = state.dateTo;
-  dateToInput.addEventListener("change", () => { state.dateTo = dateToInput.value; persistState(state); refreshDataset(); });
+  dateToInput.addEventListener("change", () => {
+    state.dateTo = dateToInput.value;
+    persistState(state); refreshDataset();
+  });
 
-  // Popover
   popoverEl.append(
     el("div", { class: "filter-popover-row" }, [
       el("span", { class: "filter-popover-label" }, ["Character"]),
@@ -593,32 +752,149 @@ export async function mountGlobalTimeline(container, appData) {
     ]),
   );
 
-  const filterByBtn = el("button", { class: "btn-small filter-by-btn" }, ["Filter by ▾"]);
+  // ── Sidebar ───────────────────────────────────────────────────────────────────
+
+  const kindBtnMap = {};
+
+  function refreshKindBtns() {
+    const ts = getTypeSettings(appData);
+    for (const kind of ALL_KINDS) {
+      const btn = kindBtnMap[kind];
+      if (!btn) continue;
+      const { color, symbol } = ts[kind];
+      const isActive = state.kinds.includes(kind);
+      btn.className = "gtl-kind-toggle" + (isActive ? " is-active" : "");
+      btn.style.background  = isActive ? color : "";
+      btn.style.borderColor = isActive ? color : "";
+      btn.style.color       = isActive ? chipTextColor(color) : "";
+      const symEl = btn.querySelector(".gtl-kind-sym");
+      if (symEl) symEl.style.color = isActive ? chipTextColor(color) : color;
+      const lblEl = btn.querySelector(".gtl-kind-label");
+      if (lblEl) lblEl.textContent = symbol + " " + KIND_LABELS[kind];
+    }
+  }
+
+  const kindListEl = el("div", { class: "gtl-kind-list" });
+  for (const kind of ALL_KINDS) {
+    const ts = getTypeSettings(appData);
+    const { color, symbol } = ts[kind];
+    const isActive = state.kinds.includes(kind);
+    const btn = el("button", { class: "gtl-kind-toggle" + (isActive ? " is-active" : "") }, [
+      el("span", { class: "gtl-kind-sym" }, [""]),
+      el("span", { class: "gtl-kind-label" }, [symbol + " " + KIND_LABELS[kind]]),
+    ]);
+    if (isActive) {
+      btn.style.background  = color;
+      btn.style.borderColor = color;
+      btn.style.color       = chipTextColor(color);
+    }
+    const symEl = btn.querySelector(".gtl-kind-sym");
+    symEl.style.color = isActive ? chipTextColor(color) : color;
+
+    btn.addEventListener("click", () => {
+      if (state.kinds.includes(kind)) {
+        if (state.kinds.length === 1) return;
+        state.kinds = state.kinds.filter(k => k !== kind);
+      } else {
+        state.kinds = [...state.kinds, kind];
+      }
+      persistState(state);
+      refreshGroups();
+      refreshDataset();
+    });
+    kindBtnMap[kind] = btn;
+    kindListEl.append(btn);
+  }
+
+  const addEvtBtn = el("button", { class: "btn-primary gtl-sidebar-add" }, ["+ Add Event"]);
+  addEvtBtn.addEventListener("click", () => {
+    openTimelineEventDialog({
+      existingEvent: null,
+      characterId:   null,
+      appData,
+      onSave:  rebuildItems,
+      onClose: () => {},
+    });
+  });
+
+  const settingsBtn = el("button", { class: "btn-small gtl-settings-btn" }, ["⚙ Types"]);
+  settingsBtn.addEventListener("click", () => {
+    popoverEl.classList.remove("is-open");
+    filterByBtn.classList.remove("is-active");
+    filterByBtn.textContent = "Filter ▾";
+    const open = settingsPopEl.classList.toggle("is-open");
+    settingsBtn.classList.toggle("is-active", open);
+    if (open) renderSettingsPop();
+  });
+
+  sidebarEl.append(
+    addEvtBtn,
+    settingsBtn,
+    el("div", { class: "gtl-sidebar-divider" }),
+    el("div", { class: "gtl-sidebar-label" }, ["Show / Hide"]),
+    kindListEl,
+  );
+
+  // ── Topbar ────────────────────────────────────────────────────────────────────
+
+  const PRESETS = ["1M", "3M", "6M", "1Y", "5Y", "All"];
+  const presetBtns = PRESETS.map((p, pi) => {
+    const btn = el("button", {
+      class: "gtl-preset-btn" + (pi === 2 ? " is-active" : ""),
+      title: p === "All" ? "Fit all events" : `Show ±${p} from current date`,
+    }, [p]);
+    btn.addEventListener("click", () => {
+      presetBtns.forEach((b, i) => b.classList.toggle("is-active", i === pi));
+      setTimeWindow(p === "All" ? "all" : p);
+    });
+    return btn;
+  });
+
+  clearBtn = el("button", { class: "btn-link filter-clear-btn" }, ["Clear filters"]);
+  clearBtn.style.display = isModified(state) ? "" : "none";
+
+  const filterByBtn = el("button", { class: "btn-small filter-by-btn" }, ["Filter ▾"]);
   filterByBtn.addEventListener("click", () => {
+    settingsPopEl.classList.remove("is-open");
+    settingsBtn.classList.remove("is-active");
     const open = popoverEl.classList.toggle("is-open");
     filterByBtn.classList.toggle("is-active", open);
-    filterByBtn.textContent = open ? "Filter by ▴" : "Filter by ▾";
+    filterByBtn.textContent = open ? "Filter ▴" : "Filter ▾";
   });
 
   clearBtn.addEventListener("click", () => {
     state = defaultState();
-    kindBtns.forEach((btn, i) => btn.classList.toggle("is-active", state.kinds.includes(ALL_KINDS[i])));
-    statusBtns.forEach((btn, i) => btn.classList.toggle("is-active", state.statuses.includes(ALL_STATUSES[i])));
+    persistState(state);
     charSelect.value = ""; factionSelect.value = ""; plotlineSelect.value = "";
     dateFromInput.value = ""; dateToInput.value = "";
     renderCharChips(); renderFactionChips(); renderPlotlineChips();
-    try { localStorage.removeItem(PERSIST_KEY); } catch {}
+    refreshGroups();
     refreshDataset();
   });
 
-  // Fill toolbar
-  toolbarEl.append(
-    el("div", { class: "gtl-toolbar-left" }, [
-      el("div", { class: "gtl-kind-toggles" }, kindBtns),
-      el("div", { class: "gtl-status-toggles" }, statusBtns),
-      clearBtn,
-      filterByBtn,
+  topbarEl.append(
+    el("div", { class: "gtl-topbar-left" }, [
+      el("div", { class: "gtl-presets" }, presetBtns),
     ]),
-    el("div", { class: "gtl-toolbar-right" }, [addEvtBtn]),
+    el("div", { class: "gtl-topbar-right" }, [filterByBtn, clearBtn]),
   );
+
+  // ── List pane ─────────────────────────────────────────────────────────────────
+
+  const searchInput = el("input", {
+    type:        "text",
+    class:       "gtl-list-search",
+    placeholder: "Search events…",
+  });
+  searchInput.addEventListener("input", () => {
+    listSearch = searchInput.value;
+    renderEventList();
+  });
+
+  listPaneEl.append(
+    el("div", { class: "gtl-list-searchbar" }, [searchInput]),
+    listBodyEl,
+  );
+
+  renderEventList();
 }

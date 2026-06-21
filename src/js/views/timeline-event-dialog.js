@@ -1,10 +1,20 @@
 import { el, clear } from "../dom.js";
-import { createTimelineEvent } from "../schema.js";
+import {
+  createTimelineEvent, createScene, createAnomaly,
+  SCENE_STATUSES, ANOMALY_STATUSES,
+} from "../schema.js";
 import { save } from "../storage.js";
+import { SYMBOLS } from "../util/timeline-settings.js";
 
 const MONTHS_LIST = [
   "January", "February", "March", "April", "May", "June",
   "July", "August", "September", "October", "November", "December",
+];
+
+const CREATE_TYPES = [
+  { value: "event",   label: "Timeline Event" },
+  { value: "scene",   label: "Scene" },
+  { value: "anomaly", label: "Anomaly" },
 ];
 
 // opts: { existingEvent, characterId, appData, onSave, onDelete, onClose }
@@ -12,10 +22,15 @@ export function openTimelineEventDialog(opts) {
   const { existingEvent, characterId, appData, onSave, onDelete, onClose } = opts;
 
   const isEdit = !!existingEvent;
-  const ev = isEdit ? { ...existingEvent, characterIds: [...(existingEvent.characterIds ?? [])] } : createTimelineEvent();
+  const ev = isEdit
+    ? { ...existingEvent, characterIds: [...(existingEvent.characterIds ?? [])] }
+    : createTimelineEvent();
+
   if (!isEdit && characterId != null && !ev.characterIds.includes(characterId)) {
     ev.characterIds = [characterId, ...ev.characterIds];
   }
+
+  let createType = "event";
 
   function closeDialog() {
     document.removeEventListener("keydown", onDialogEsc);
@@ -26,7 +41,8 @@ export function openTimelineEventDialog(opts) {
   function onDialogEsc(e) { if (e.key === "Escape") closeDialog(); }
   document.addEventListener("keydown", onDialogEsc);
 
-  // ── Date precision helpers ──────────────────────────────────────────────────
+  // ── Shared date helpers ─────────────────────────────────────────────────────
+
   function parseDateField(s) {
     if (!s) return { precision: "year", year: "", month: 1 };
     const parts = s.split("-");
@@ -35,98 +51,219 @@ export function openTimelineEventDialog(opts) {
     return { precision: "year", year: parts[0], month: 1 };
   }
 
+  // ── Event fields ─────────────────────────────────────────────────────────────
+
   const dp = parseDateField(ev.date);
 
-  const precisionSel = el("select", { class: "sheet-input ptl-precision-sel" });
+  const evPrecisionSel = el("select", { class: "sheet-input ptl-precision-sel" });
   for (const [val, label] of [["year", "Year"], ["month", "Month"], ["day", "Day"]]) {
     const opt = el("option", { value: val }, [label]);
     if (val === dp.precision) opt.selected = true;
-    precisionSel.append(opt);
+    evPrecisionSel.append(opt);
   }
 
-  const yearInput = el("input", {
-    type: "number",
-    class: "sheet-input ptl-year-input",
-    placeholder: "Year…",
-    min: "1",
-    max: "9999",
+  const evYearInput = el("input", {
+    type: "number", class: "sheet-input ptl-year-input",
+    placeholder: "Year…", min: "1", max: "9999",
   });
-  yearInput.value = dp.year;
+  evYearInput.value = dp.year;
 
-  const monthSel = el("select", { class: "sheet-input" });
+  const evMonthSel = el("select", { class: "sheet-input" });
   for (let i = 1; i <= 12; i++) {
     const opt = el("option", { value: String(i).padStart(2, "0") }, [MONTHS_LIST[i - 1]]);
     if (i === dp.month) opt.selected = true;
-    monthSel.append(opt);
+    evMonthSel.append(opt);
   }
 
-  const dayInput = el("input", { type: "date", class: "sheet-input" });
-  if (dp.precision === "day" && dp.fullDate) dayInput.value = dp.fullDate;
+  const evDayInput = el("input", { type: "date", class: "sheet-input" });
+  if (dp.precision === "day" && dp.fullDate) evDayInput.value = dp.fullDate;
 
-  const dateFieldsWrap = el("div", { class: "ptl-date-fields" });
+  const evDateFieldsWrap = el("div", { class: "ptl-date-fields" });
 
-  function renderDateFields() {
-    clear(dateFieldsWrap);
-    const p = precisionSel.value;
-    if (p === "year") {
-      dateFieldsWrap.append(yearInput);
-    } else if (p === "month") {
-      dateFieldsWrap.append(yearInput, monthSel);
-    } else {
-      dateFieldsWrap.append(dayInput);
-    }
+  function renderEvDateFields() {
+    clear(evDateFieldsWrap);
+    const p = evPrecisionSel.value;
+    if (p === "year")       evDateFieldsWrap.append(evYearInput);
+    else if (p === "month") evDateFieldsWrap.append(evYearInput, evMonthSel);
+    else                    evDateFieldsWrap.append(evDayInput);
   }
-  renderDateFields();
-  precisionSel.addEventListener("change", renderDateFields);
+  renderEvDateFields();
+  evPrecisionSel.addEventListener("change", renderEvDateFields);
 
-  function buildDateString() {
-    const p = precisionSel.value;
-    if (p === "year") {
-      const y = yearInput.value.trim();
-      return y || null;
-    }
-    if (p === "month") {
-      const y = yearInput.value.trim();
-      if (!y) return null;
-      return `${y}-${monthSel.value}`;
-    }
-    return dayInput.value || null;
+  function buildEvDateString() {
+    const p = evPrecisionSel.value;
+    if (p === "year")  { const y = evYearInput.value.trim(); return y || null; }
+    if (p === "month") { const y = evYearInput.value.trim(); return y ? `${y}-${evMonthSel.value}` : null; }
+    return evDayInput.value || null;
   }
 
-  // ── Form fields ─────────────────────────────────────────────────────────────
-  const titleInput = el("input", {
-    type: "text",
-    class: "sheet-input",
-    placeholder: "Event title…",
+  const evTitleInput = el("input", {
+    type: "text", class: "sheet-input", placeholder: "Event title…",
   });
-  titleInput.value = ev.title ?? "";
+  evTitleInput.value = ev.title ?? "";
 
-  const bodyTextarea = el("textarea", {
-    class: "sheet-input ptl-body-textarea",
-    placeholder: "Notes… (optional)",
-    rows: "3",
+  const evBodyTextarea = el("textarea", {
+    class: "sheet-input ptl-body-textarea", placeholder: "Notes… (optional)", rows: "3",
   });
-  bodyTextarea.value = ev.body ?? "";
+  evBodyTextarea.value = ev.body ?? "";
 
-  // ── Buttons ─────────────────────────────────────────────────────────────────
-  const saveBtn = el("button", { class: "btn-primary" }, [isEdit ? "Save" : "Add"]);
+  const symbolSel = el("select", { class: "sheet-input" });
+  symbolSel.append(el("option", { value: "" }, ["— Type default —"]));
+  for (const sym of SYMBOLS) {
+    const opt = el("option", { value: sym.value }, [sym.label]);
+    if (sym.value === ev.symbol) opt.selected = true;
+    symbolSel.append(opt);
+  }
+  if (!ev.symbol) symbolSel.value = "";
+
+  const eventFieldsEl = el("div", {}, [
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Title"]),
+      evTitleInput,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Date precision"]),
+      evPrecisionSel,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Date"]),
+      evDateFieldsWrap,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Symbol override"]),
+      symbolSel,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Notes"]),
+      evBodyTextarea,
+    ]),
+  ]);
+
+  // ── Scene fields ─────────────────────────────────────────────────────────────
+
+  const sceneTitleInput = el("input", {
+    type: "text", class: "sheet-input", placeholder: "Scene title…",
+  });
+
+  const sceneDateInput = el("input", { type: "date", class: "sheet-input" });
+
+  const sceneStatusSel = el("select", { class: "sheet-input" });
+  for (const s of SCENE_STATUSES) {
+    const opt = el("option", { value: s }, [s]);
+    if (s === "Draft") opt.selected = true;
+    sceneStatusSel.append(opt);
+  }
+
+  const sceneFieldsEl = el("div", { hidden: true }, [
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Title"]),
+      sceneTitleInput,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Date"]),
+      sceneDateInput,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Status"]),
+      sceneStatusSel,
+    ]),
+  ]);
+
+  // ── Anomaly fields ────────────────────────────────────────────────────────────
+
+  const anomalyTitleInput = el("input", {
+    type: "text", class: "sheet-input", placeholder: "Anomaly name…",
+  });
+
+  const anomalyDateInput = el("input", { type: "date", class: "sheet-input" });
+
+  const anomalyStatusSel = el("select", { class: "sheet-input" });
+  for (const s of ANOMALY_STATUSES) {
+    const opt = el("option", { value: s }, [s]);
+    if (s === "Unknown") opt.selected = true;
+    anomalyStatusSel.append(opt);
+  }
+
+  const anomalyFieldsEl = el("div", { hidden: true }, [
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Name"]),
+      anomalyTitleInput,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Discovery date"]),
+      anomalyDateInput,
+    ]),
+    el("div", { class: "dialog-field" }, [
+      el("div", { class: "dialog-field-label" }, ["Status"]),
+      anomalyStatusSel,
+    ]),
+  ]);
+
+  // ── Type selector (create mode only) ─────────────────────────────────────────
+
+  const typeSel = el("select", { class: "sheet-input" });
+  for (const { value, label } of CREATE_TYPES) {
+    typeSel.append(el("option", { value }, [label]));
+  }
+
+  const typeFieldEl = el("div", { class: "dialog-field" }, [
+    el("div", { class: "dialog-field-label" }, ["Type"]),
+    typeSel,
+  ]);
+  if (isEdit) typeFieldEl.hidden = true;
+
+  const saveBtn = el("button", { class: "btn-primary" }, [isEdit ? "Save" : "Add Event"]);
+
+  function switchType() {
+    createType = typeSel.value;
+    eventFieldsEl.hidden   = createType !== "event";
+    sceneFieldsEl.hidden   = createType !== "scene";
+    anomalyFieldsEl.hidden = createType !== "anomaly";
+    const labels = { event: "Add Event", scene: "Add Scene", anomaly: "Add Anomaly" };
+    if (!isEdit) saveBtn.textContent = labels[createType] ?? "Add";
+  }
+  typeSel.addEventListener("change", switchType);
+
+  // ── Save handler ─────────────────────────────────────────────────────────────
+
   saveBtn.addEventListener("click", async () => {
-    ev.title     = titleInput.value.trim();
-    ev.body      = bodyTextarea.value;
-    ev.date      = buildDateString();
-    ev.updatedAt = new Date().toISOString();
+    const type = isEdit ? "event" : createType;
 
-    if (characterId != null && !ev.characterIds.includes(characterId)) {
-      ev.characterIds = [characterId, ...ev.characterIds];
+    if (type === "event") {
+      ev.title     = evTitleInput.value.trim();
+      ev.body      = evBodyTextarea.value;
+      ev.date      = buildEvDateString();
+      ev.symbol    = symbolSel.value || null;
+      ev.updatedAt = new Date().toISOString();
+
+      if (characterId != null && !ev.characterIds.includes(characterId)) {
+        ev.characterIds = [characterId, ...ev.characterIds];
+      }
+
+      const idx = appData.timelineEvents.findIndex(e => e.id === ev.id);
+      if (idx >= 0) appData.timelineEvents[idx] = ev;
+      else          appData.timelineEvents.push(ev);
+      await save("timelineEvents", appData.timelineEvents);
+
+    } else if (type === "scene") {
+      const scene      = createScene();
+      scene.title      = sceneTitleInput.value.trim();
+      scene.sceneDate  = sceneDateInput.value || null;
+      scene.status     = sceneStatusSel.value;
+      appData.scenes ??= [];
+      appData.scenes.push(scene);
+      await save("scenes", appData.scenes);
+
+    } else if (type === "anomaly") {
+      const anomaly          = createAnomaly();
+      anomaly.title          = anomalyTitleInput.value.trim();
+      anomaly.discoveryDate  = anomalyDateInput.value || null;
+      anomaly.status         = anomalyStatusSel.value;
+      appData.anomalies ??= [];
+      appData.anomalies.push(anomaly);
+      await save("anomalies", appData.anomalies);
     }
 
-    const idx = appData.timelineEvents.findIndex(e => e.id === ev.id);
-    if (idx >= 0) {
-      appData.timelineEvents[idx] = ev;
-    } else {
-      appData.timelineEvents.push(ev);
-    }
-    await save("timelineEvents", appData.timelineEvents);
     closeDialog();
     onSave?.();
   });
@@ -147,26 +284,16 @@ export function openTimelineEventDialog(opts) {
     footer.append(deleteBtn);
   }
 
-  // ── Dialog DOM ───────────────────────────────────────────────────────────────
+  // ── Dialog DOM ────────────────────────────────────────────────────────────────
+
+  const dialogTitle = isEdit ? "Edit Event" : "Add to Timeline";
   const dialog = el("div", { class: "dialog" }, [
-    el("h2", { class: "dialog-title" }, [isEdit ? "Edit Event" : "Add Event"]),
+    el("h2", { class: "dialog-title" }, [dialogTitle]),
     el("div", { class: "dialog-body" }, [
-      el("div", { class: "dialog-field" }, [
-        el("div", { class: "dialog-field-label" }, ["Title"]),
-        titleInput,
-      ]),
-      el("div", { class: "dialog-field" }, [
-        el("div", { class: "dialog-field-label" }, ["Date precision"]),
-        precisionSel,
-      ]),
-      el("div", { class: "dialog-field" }, [
-        el("div", { class: "dialog-field-label" }, ["Date"]),
-        dateFieldsWrap,
-      ]),
-      el("div", { class: "dialog-field" }, [
-        el("div", { class: "dialog-field-label" }, ["Notes"]),
-        bodyTextarea,
-      ]),
+      typeFieldEl,
+      eventFieldsEl,
+      sceneFieldsEl,
+      anomalyFieldsEl,
     ]),
     footer,
   ]);
@@ -176,5 +303,5 @@ export function openTimelineEventDialog(opts) {
   dialogBackdrop.addEventListener("click", e => { if (e.target === dialogBackdrop) closeDialog(); });
   document.body.append(dialogBackdrop);
 
-  titleInput.focus();
+  (isEdit ? evTitleInput : typeSel).focus();
 }
