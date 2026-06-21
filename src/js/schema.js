@@ -95,6 +95,8 @@ export function createCharacter() {
     akaAliasIndices: [],
     age: null,
     birthday: null,
+    birthTime: null,
+    birthCityId: null,
     placeOfBirth: "",
     languages: [{ name: "English", level: "Native" }],
     deathDate: null,
@@ -350,4 +352,76 @@ export function migrateToV4(characters, _relationships) {
     if (!("displayAliasIndex" in c)) c.displayAliasIndex = null;
     if (!("deathDate" in c))         c.deathDate = null;
   }
+}
+
+// ── City seed data ────────────────────────────────────────────────────────────
+
+export function seedCities() {
+  const cities = [
+    // United Kingdom and Ireland
+    ["Oxford, England",        51.7520,   -1.2577, "Europe/London"],
+    ["London, England",        51.5074,   -0.1278, "Europe/London"],
+    ["Cambridge, England",     52.2053,    0.1218, "Europe/London"],
+    ["Edinburgh, Scotland",    55.9533,   -3.1883, "Europe/London"],
+    ["Cardiff, Wales",         51.4816,   -3.1791, "Europe/London"],
+    ["Manchester, England",    53.4808,   -2.2426, "Europe/London"],
+    ["Dublin, Ireland",        53.3498,   -6.2603, "Europe/Dublin"],
+    // Continental Europe
+    ["Paris, France",          48.8566,    2.3522, "Europe/Paris"],
+    ["Berlin, Germany",        52.5200,   13.4050, "Europe/Berlin"],
+    ["Düsseldorf, Germany",    51.2277,    6.7735, "Europe/Berlin"],
+    ["Munich, Germany",        48.1351,   11.5820, "Europe/Berlin"],
+    ["Amsterdam, Netherlands", 52.3676,    4.9041, "Europe/Amsterdam"],
+    ["Rome, Italy",            41.9028,   12.4964, "Europe/Rome"],
+    ["Madrid, Spain",          40.4168,   -3.7038, "Europe/Madrid"],
+    ["Copenhagen, Denmark",    55.6761,   12.5683, "Europe/Copenhagen"],
+    ["Vienna, Austria",        48.2082,   16.3738, "Europe/Vienna"],
+    ["Zurich, Switzerland",    47.3769,    8.5417, "Europe/Zurich"],
+    ["Prague, Czechia",        50.0755,   14.4378, "Europe/Prague"],
+    ["Stockholm, Sweden",      59.3293,   18.0686, "Europe/Stockholm"],
+    ["Oslo, Norway",           59.9139,   10.7522, "Europe/Oslo"],
+    ["Helsinki, Finland",      60.1699,   24.9384, "Europe/Helsinki"],
+    ["Brussels, Belgium",      50.8503,    4.3517, "Europe/Brussels"],
+    ["Lisbon, Portugal",       38.7223,   -9.1393, "Europe/Lisbon"],
+    ["Warsaw, Poland",         52.2297,   21.0122, "Europe/Warsaw"],
+    ["Budapest, Hungary",      47.4979,   19.0402, "Europe/Budapest"],
+    ["Athens, Greece",         37.9838,   23.7275, "Europe/Athens"],
+    // Canada
+    ["Toronto, Ontario",       43.6532,  -79.3832, "America/Toronto"],
+    ["Montreal, Quebec",       45.5017,  -73.5673, "America/Montreal"],
+    ["Quebec City, Quebec",    46.8139,  -71.2080, "America/Montreal"],
+    ["Vancouver, BC",          49.2827, -123.1207, "America/Vancouver"],
+    ["Calgary, Alberta",       51.0447, -114.0719, "America/Edmonton"],
+    ["Edmonton, Alberta",      53.5461, -113.4938, "America/Edmonton"],
+    ["Ottawa, Ontario",        45.4215,  -75.6972, "America/Toronto"],
+    ["Halifax, Nova Scotia",   44.6488,  -63.5752, "America/Halifax"],
+    // United States
+    ["New York, NY",           40.7128,  -74.0060, "America/New_York"],
+    ["Boston, MA",             42.3601,  -71.0589, "America/New_York"],
+    ["Washington, DC",         38.9072,  -77.0369, "America/New_York"],
+    ["Philadelphia, PA",       39.9526,  -75.1652, "America/New_York"],
+    ["Atlanta, GA",            33.7490,  -84.3880, "America/New_York"],
+    ["Miami, FL",              25.7617,  -80.1918, "America/New_York"],
+    ["Chicago, IL",            41.8781,  -87.6298, "America/Chicago"],
+    ["Minneapolis, MN",        44.9778,  -93.2650, "America/Chicago"],
+    ["Houston, TX",            29.7604,  -95.3698, "America/Chicago"],
+    ["Dallas, TX",             32.7767,  -96.7970, "America/Chicago"],
+    ["Denver, CO",             39.7392, -104.9903, "America/Denver"],
+    ["Salt Lake City, UT",     40.7608, -111.8910, "America/Denver"],
+    ["Phoenix, AZ",            33.4484, -112.0740, "America/Phoenix"],
+    ["Los Angeles, CA",        34.0522, -118.2437, "America/Los_Angeles"],
+    ["San Francisco, CA",      37.7749, -122.4194, "America/Los_Angeles"],
+    ["Oakland, CA",            37.8044, -122.2712, "America/Los_Angeles"],
+    ["Seattle, WA",            47.6062, -122.3321, "America/Los_Angeles"],
+    ["Portland, OR",           45.5152, -122.6784, "America/Los_Angeles"],
+    ["Honolulu, HI",           21.3099, -157.8581, "Pacific/Honolulu"],
+    ["Anchorage, AK",          61.2181, -149.9003, "America/Anchorage"],
+    // Other
+    ["Harare, Zimbabwe",      -17.8252,   31.0335, "Africa/Harare"],
+    ["Wellington, New Zealand",-41.2865, 174.7762, "Pacific/Auckland"],
+  ];
+  return cities.map(([name, lat, lng, timezone]) => ({
+    id: crypto.randomUUID(),
+    name, lat, lng, timezone,
+  }));
 }

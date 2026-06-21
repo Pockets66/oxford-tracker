@@ -282,6 +282,17 @@ Followups:
 - Global search cross-link deferred; Slice 12 (search) will add anomalies to the search index when implemented.
 - Kind filter bug in global-timeline fixed: item kind strings were singular but ALL_KINDS used plural; corrected as part of adding "anomalies" kind.
 
+## Slice 14a.1: Birth time and city inputs
+
+Birth time (HH:MM) and birth city combobox added to the Zodiac card on the character sheet. 54-city seed database stored in `meta.knownCities`. "+ Add new city" inline dialog for custom entries. Read-only Zodiac card shows "Born [time] in [city]" when either is set.
+
+Prompt: `prompts/14a1-birth-inputs.md`
+
+**Status: done** — 2026-06-21
+
+Followups:
+- Chart computation (slice 14a.2) will use `birthTime`, `birthCityId`, lat/lng, and timezone from meta.knownCities.
+
 ## Slice 12: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.

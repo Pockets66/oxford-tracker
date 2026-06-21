@@ -13,7 +13,7 @@ import { mountSecretPage } from "./views/secret-page.js";
 import { mountGlobalTimeline } from "./views/global-timeline.js";
 import { mountAnomalies } from "./views/anomalies.js";
 import { mountAnomalyPage } from "./views/anomaly-page.js";
-import { migrateCharacters, migrateNamesToV3, migrateToV4 } from "./schema.js";
+import { migrateCharacters, migrateNamesToV3, migrateToV4, seedCities } from "./schema.js";
 import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
 const TABS = [
@@ -175,6 +175,7 @@ async function init() {
     }
 
     appData.meta.knownLanguages       ??= [];
+    appData.meta.knownCities          ??= seedCities();
     appData.meta.timelineTypeSettings ??= {};
     appData.secrets        ??= [];
     appData.scenes         ??= [];

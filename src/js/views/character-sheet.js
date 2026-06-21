@@ -178,17 +178,28 @@ function renderIdentityRO(ch, appData) {
     : scEmpty("Click ✏ to add identity details.");
 }
 
-function renderZodiacRO(ch) {
+function renderZodiacRO(ch, appData) {
   const sun    = ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
   const moon   = ch.zodiac?.moon;
   const rising = ch.zodiac?.rising;
 
-  if (!sun && !moon && !rising) return scEmpty("No astrological data.");
+  if (!sun && !moon && !rising && !ch.birthTime && !ch.birthCityId) return scEmpty("No astrological data.");
 
   const items = [];
   if (sun) items.push(el("p", { class: "sc-astro-sun" }, [sun]));
   const extra = [moon ? `Moon in ${moon}` : null, rising ? `Rising ${rising}` : null].filter(Boolean);
   if (extra.length) items.push(el("p", { class: "sc-astro-extra" }, [extra.join(" · ")]));
+
+  const cityName = ch.birthCityId
+    ? (appData?.meta?.knownCities ?? []).find(c => c.id === ch.birthCityId)?.name ?? null
+    : null;
+  if (ch.birthTime || cityName) {
+    const parts = [];
+    if (ch.birthTime) parts.push(`Born ${ch.birthTime}`);
+    if (cityName)     parts.push(ch.birthTime ? `in ${cityName}` : `Born in ${cityName}`);
+    items.push(el("p", { class: "sc-astro-birthplace" }, [parts.join(" ")]));
+  }
+
   return el("div", { class: "sc-body" }, items);
 }
 
@@ -566,7 +577,7 @@ function editIdentity(ch, appData, debouncedSave, persistNow, done) {
   ]);
 }
 
-function editZodiac(ch, debouncedSave, done) {
+function editZodiac(ch, appData, persistNow, debouncedSave, done) {
   const sun       = ch.zodiac?.sun ?? sunSignFromDate(ch.birthday);
   const moonSel   = signSelect(ch.zodiac?.moon);
   const risingSel = signSelect(ch.zodiac?.rising);
@@ -591,6 +602,50 @@ function editZodiac(ch, debouncedSave, done) {
     toggleBtn.textContent = extraBody.hidden ? "+ More astrological info" : "▾ Astrological details";
   });
 
+  // Birth time
+  const timeInput = el("input", { type: "time", class: "sheet-input" });
+  timeInput.value = ch.birthTime || "";
+  timeInput.addEventListener("change", () => {
+    ch.birthTime = timeInput.value || null;
+    debouncedSave();
+  });
+
+  // Birth city combobox with rebuild-in-place on "+ Add new city"
+  const cityComboWrap = el("div");
+
+  function rebuildCityCombo() {
+    clear(cityComboWrap);
+    const cityItems = [
+      ...(appData.meta.knownCities ?? [])
+        .slice()
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map(c => ({ value: c.id, label: c.name })),
+      { value: "__add__", label: "+ Add new city" },
+    ];
+    cityComboWrap.append(createCombobox({
+      items:     cityItems,
+      value:     ch.birthCityId || "",
+      placeholder: "Choose a city",
+      presorted: true,
+      onChange: (value) => {
+        if (value === "__add__") {
+          openAddCityDialog(appData, (newCity) => {
+            appData.meta.knownCities ??= [];
+            appData.meta.knownCities.push(newCity);
+            save("meta", appData.meta);
+            ch.birthCityId = newCity.id;
+            persistNow();
+            rebuildCityCombo();
+          });
+        } else {
+          ch.birthCityId = value || null;
+          debouncedSave();
+        }
+      },
+    }));
+  }
+  rebuildCityCombo();
+
   return el("div", { class: "sc-edit-form" }, [
     el("label", { class: "sheet-label" }, [
       "Sun ☀",
@@ -598,8 +653,63 @@ function editZodiac(ch, debouncedSave, done) {
     ]),
     toggleBtn,
     extraBody,
+    el("label", { class: "sheet-label" }, ["Birth time (optional)", timeInput]),
+    el("label", { class: "sheet-label" }, ["Birth city", cityComboWrap]),
     makeDoneBtn(done),
   ]);
+}
+
+function openAddCityDialog(appData, onSave) {
+  const nameInput = el("input", { type: "text",   class: "sheet-input", placeholder: "City name…" });
+  const latInput  = el("input", { type: "number", class: "sheet-input", placeholder: "Latitude",  min: "-90",  max: "90",  step: "any" });
+  const lngInput  = el("input", { type: "number", class: "sheet-input", placeholder: "Longitude", min: "-180", max: "180", step: "any" });
+  const tzInput   = el("input", { type: "text",   class: "sheet-input", placeholder: "e.g. Europe/London" });
+
+  const errEl = el("p", { class: "ptl-error" });
+  errEl.hidden = true;
+
+  function validate() {
+    const name = nameInput.value.trim();
+    const lat  = parseFloat(latInput.value);
+    const lng  = parseFloat(lngInput.value);
+    if (!name)          { errEl.textContent = "Name is required.";        errEl.hidden = false; return null; }
+    if (isNaN(lat))     { errEl.textContent = "Latitude must be a number."; errEl.hidden = false; return null; }
+    if (isNaN(lng))     { errEl.textContent = "Longitude must be a number."; errEl.hidden = false; return null; }
+    errEl.hidden = true;
+    return { id: crypto.randomUUID(), name, lat, lng, timezone: tzInput.value.trim() || "UTC" };
+  }
+
+  const saveBtn   = el("button", { class: "btn-primary" }, ["Save city"]);
+  const cancelBtn = el("button", { class: "btn-secondary" }, ["Cancel"]);
+
+  const backdrop = el("div", { class: "dialog-backdrop" });
+  const dialog   = el("div", { class: "dialog" }, [
+    el("h2", { class: "dialog-title" }, ["Add new city"]),
+    el("div", { class: "dialog-body" }, [
+      el("div", { class: "dialog-field" }, [el("div", { class: "dialog-field-label" }, ["Name"]),      nameInput]),
+      el("div", { class: "dialog-field" }, [el("div", { class: "dialog-field-label" }, ["Latitude"]),  latInput]),
+      el("div", { class: "dialog-field" }, [el("div", { class: "dialog-field-label" }, ["Longitude"]), lngInput]),
+      el("div", { class: "dialog-field" }, [el("div", { class: "dialog-field-label" }, ["Timezone"]),  tzInput]),
+      errEl,
+    ]),
+    el("div", { class: "dialog-footer" }, [saveBtn, cancelBtn]),
+  ]);
+
+  backdrop.append(dialog);
+  document.body.append(backdrop);
+
+  function close() { backdrop.remove(); }
+  cancelBtn.addEventListener("click", close);
+  backdrop.addEventListener("click", e => { if (e.target === backdrop) close(); });
+
+  saveBtn.addEventListener("click", () => {
+    const city = validate();
+    if (!city) return;
+    close();
+    onSave(city);
+  });
+
+  nameInput.focus();
 }
 
 function editLanguages(ch, appData, persistNow, done) {
@@ -958,8 +1068,8 @@ export function mountCharacterSheet(container, appData, id) {
 
     const rightCol = el("div", { class: "sheet-cards" }, [
       makeEditCard("zodiac", "Zodiac",
-        () => renderZodiacRO(character),
-        (done) => editZodiac(character, debouncedSave, done)),
+        () => renderZodiacRO(character, appData),
+        (done) => editZodiac(character, appData, persistNow, debouncedSave, done)),
       makeEditCard("languages", "Languages",
         () => renderLanguagesRO(character),
         (done) => editLanguages(character, appData, persistNow, done)),
