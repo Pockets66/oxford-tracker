@@ -195,3 +195,6 @@
 .zodiac-view-full {
   margin-top: 0.6rem;
 }
+.natal-modal-content {
+    font-variant-emoji: text;
+}

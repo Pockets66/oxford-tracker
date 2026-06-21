@@ -528,3 +528,9 @@
   gap: 0.3rem;
   width: 100%;
 }
+/* Force text-style rendering for astrological glyphs */
+.zodiac-line-outer-planets,
+.zodiac-line-inner-planets,
+.zodiac-line-moon-rising {
+    font-variant-emoji: text;
+}

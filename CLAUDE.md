@@ -37,7 +37,6 @@ Work is delivered in slices. Each slice has a prompt file in `prompts/` describi
 **You do not rewrite the app on every slice.** without extended thinking: read only the relevant files, add or modify only what the current prompt asks for, leave everything else alone. If you think an earlier file needs refactoring to support the new slice, say so first and wait for confirmation. Do not silently restructure.
 
 
-
 When a slice is done, append a short note to ROADMAP.md under that slice marking it complete and listing any followups discovered along the way.
 
 Claude Code cannot see the running app. Do not attempt screenshots, browser automation, or visual verification. Trust the code. The user will report back if something looks wrong.
@@ -73,6 +72,7 @@ will provide all data in the latest schema shape.
 ## UI rules
 
 - Tabs across the top: Characters, Scenes, Plotlines, Factions, Anomalies. Plus a Settings affordance for opening or switching the data folder.
+- NEVER use emojis in the UI. Do not even mention them in code comments. They are not a design element here.
 - Every reference to another entity is a clickable link that routes to that entity's page. Character names in scene cards, plotline names on scene pages, faction names on character cards, all of it.
 - Diagrams must not overlap labels. Use Cytoscape's built in layout options (`cose`, `cose-bilkent` if vendored, or `breadthfirst`) and tune `nodeRepulsion` and `idealEdgeLength` until labels breathe.
 - Color coding for character ownership uses CSS variables defined in `css/theme.css`. Owners and their colors:
@@ -117,6 +117,27 @@ than writing the file from scratch. A full file rewrite is only acceptable when:
 Otherwise: find the relevant block, change just that block, leave everything else.
 This preserves comments, formatting, and any user edits that may have been made
 between slices.
+
+## Editing discipline (strict)
+
+When a slice prompt says "in file X, do Y", make Y as a series of `str_replace`
+operations, NEVER as a full file rewrite. Required pattern:
+
+1. Read only the listed files
+2. For each change, identify the smallest unique string in the existing file
+   that needs to change
+3. Use `str_replace` with that string as `old_str` and the modified version as
+   `new_str`
+4. Repeat for each change
+5. Do NOT use `create_file` on files that already exist
+6. Do NOT regenerate a file's content from scratch
+
+If a prompt asks for changes that genuinely require restructuring a file
+(more than 60% of lines changing), stop and ask the user whether to rewrite
+or to do it as a sequence of smaller edits.
+
+Generated content (interpretation text, glyph SVGs, etc.) is acceptable to
+produce as a single new file. Code modifications to existing files are not.
 
 ## Git
 

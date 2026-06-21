@@ -51,24 +51,91 @@ export function openTimelineItemPanel({ item, appData, containerEl, onSave, onDe
 
   if (item.kind === "events") {
     const ev = (appData.timelineEvents ?? []).find(e => e.id === item.eventId);
-    if (ev) buildEventForm(body, ev, appData, ts, close, onSave, onDelete);
+    if (ev) showEventReadOnly(body, ev, appData, ts, close, onSave, onDelete);
     else body.append(el("p", { class: "gtl-panel-muted" }, ["Event not found."]));
 
   } else if (item.kind === "scenes") {
     const sc = (appData.scenes ?? []).find(s => s.id === item.sceneId);
-    buildSceneForm(body, sc, item, appData, ts, close, onSave);
+    if (sc) showSceneReadOnly(body, sc, item, appData, ts, close, onSave);
+    else body.append(el("p", { class: "gtl-panel-muted" }, ["Scene not found."]));
 
   } else if (item.kind === "anomalies") {
     const a = (appData.anomalies ?? []).find(x => x.id === item.anomalyId);
-    buildAnomalyForm(body, a, item, appData, ts, close, onSave);
+    if (a) showAnomalyReadOnly(body, a, item, appData, ts, close, onSave);
+    else body.append(el("p", { class: "gtl-panel-muted" }, ["Anomaly not found."]));
 
   } else {
     const ch = (appData.characters ?? []).find(x => x.id === item.characterId);
-    buildCharForm(body, ch, item, appData, ts, close, onSave);
+    if (ch) showCharReadOnly(body, ch, item, appData, ts, close, onSave);
+    else body.append(el("p", { class: "gtl-panel-muted" }, ["Character not found."]));
   }
 
   containerEl.append(panel);
 }
+
+// ── Read-only views (shown on first click; Edit button switches to form) ──────
+
+function showEventReadOnly(body, ev, appData, ts, close, onSave, onDelete) {
+  if (ev.body?.trim()) {
+    body.append(el("p", { class: "gtl-panel-notes-ro" }, [ev.body]));
+  } else {
+    body.append(el("p", { class: "gtl-panel-muted" }, ["No notes."]));
+  }
+  const editBtn = el("button", { class: "btn-secondary" }, ["Edit"]);
+  editBtn.addEventListener("click", () => {
+    clear(body);
+    buildEventForm(body, ev, appData, ts, close, onSave, onDelete);
+  });
+  body.append(el("div", { class: "gtl-panel-footer" }, [editBtn]));
+}
+
+function showSceneReadOnly(body, sc, item, appData, ts, close, onSave) {
+  if (sc.status) {
+    body.append(pfield("Status", el("span", { class: "gtl-panel-field-value" }, [sc.status])));
+  }
+  const editBtn = el("button", { class: "btn-secondary" }, ["Edit"]);
+  editBtn.addEventListener("click", () => {
+    clear(body);
+    buildSceneForm(body, sc, item, appData, ts, close, onSave);
+  });
+  const navBtn = el("button", { class: "gtl-panel-nav-btn" }, ["Open Scene →"]);
+  navBtn.addEventListener("click", () => { close(); navigate(`scenes/${sc.id}`); });
+  body.append(el("div", { class: "gtl-panel-footer" }, [editBtn, navBtn]));
+}
+
+function showAnomalyReadOnly(body, a, item, appData, ts, close, onSave) {
+  if (a.status) {
+    body.append(pfield("Status", el("span", { class: "gtl-panel-field-value" }, [a.status])));
+  }
+  const isObs = String(item.id).startsWith("anomaly-obs:");
+  if (isObs) {
+    body.append(pfield("Observation date", el("span", { class: "gtl-panel-field-value" }, [
+      item.dateRaw ? formatFlexibleDate(item.dateRaw) : "",
+    ])));
+  }
+  const editBtn = el("button", { class: "btn-secondary" }, ["Edit"]);
+  editBtn.addEventListener("click", () => {
+    clear(body);
+    buildAnomalyForm(body, a, item, appData, ts, close, onSave);
+  });
+  const navBtn = el("button", { class: "gtl-panel-nav-btn" }, ["Open Anomaly →"]);
+  navBtn.addEventListener("click", () => { close(); navigate(`anomalies/${a.id}`); });
+  body.append(el("div", { class: "gtl-panel-footer" }, [editBtn, navBtn]));
+}
+
+function showCharReadOnly(body, ch, item, appData, ts, close, onSave) {
+  const isBirth = item.kind === "births";
+  const editBtn = el("button", { class: "btn-secondary" }, ["Edit"]);
+  editBtn.addEventListener("click", () => {
+    clear(body);
+    buildCharForm(body, ch, item, appData, ts, close, onSave);
+  });
+  const navBtn = el("button", { class: "gtl-panel-nav-btn" }, ["Open Character →"]);
+  navBtn.addEventListener("click", () => { close(); navigate(`characters/${ch.id}`); });
+  body.append(el("div", { class: "gtl-panel-footer" }, [editBtn, navBtn]));
+}
+
+// ── Edit forms ────────────────────────────────────────────────────────────────
 
 function buildSceneForm(body, sc, item, appData, ts, close, onSave) {
   if (!sc) { body.append(el("p", { class: "gtl-panel-muted" }, ["Scene not found."])); return; }
