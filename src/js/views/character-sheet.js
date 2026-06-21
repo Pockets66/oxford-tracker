@@ -274,6 +274,14 @@ function renderZodiacRO(ch, appData) {
     if (outerParts.length) {
       items.push(el("p", { class: "zodiac-line-outer-planets" }, [outerParts.join(" · ")]));
     }
+
+    // "View full chart" button
+    const viewBtn = el("button", { class: "btn-small zodiac-view-full" }, ["View full chart"]);
+    viewBtn.addEventListener("click", async () => {
+      const { openNatalChartModal } = await import("./natal-chart-modal.js");
+      openNatalChartModal(ch, appData);
+    });
+    items.push(viewBtn);
   } else {
     // No chart: fall back to manual moon/rising overrides only
     const moon   = ch.zodiac?.moon;

@@ -318,6 +318,19 @@ Followups:
 - 14a.4: full natal chart modal (aspects, houses, glyph wheel).
 - Manual moon/rising overrides in the edit form could show a note "(overriding computed <sign>)" for clarity.
 
+## Slice 14a.4: Full chart modal (structure + interpretations)
+
+"View full chart" button added to Zodiac card read-only view (only visible when natalChart exists). Clicking it lazy-loads natal-chart-modal.js and opens a full-screen modal showing: planets table (glyph, name, sign, degree, house, interpretation), angles (ASC/MC), houses (cusp + house interpretation), and aspects (sorted by orb, capped at 25 with "+ N more" expander, per-aspect interpretation when available). Interpretations loaded from src/js/data/astrology-interpretations.json via fetch. Modal closes via Esc, backdrop click, or X button.
+
+Prompt: `prompts/14a4-chart-modal.md`
+
+**Status: done** — 2026-06-21
+
+Followups:
+- 14b: Synastry / compatibility between two characters.
+- Graphical chart wheel (SVG glyph ring) deferred — would need a canvas or SVG rendering pass.
+- Print-to-PDF export deferred.
+
 ## Slice 12: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.
