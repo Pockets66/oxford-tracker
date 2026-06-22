@@ -212,6 +212,27 @@ export function createPlotline() {
   };
 }
 
+// ── Scene ↔ Plotline sync helpers (computed, not stored on scenes) ────────────
+
+export function plotlinesForScene(sceneId, appData) {
+  return (appData.plotlines ?? []).filter(p =>
+    (p.items ?? []).some(item => item.kind === "scene" && item.sceneId === sceneId)
+  );
+}
+
+export function addSceneToPlotline(sceneId, plotlineId, appData) {
+  const plotline = (appData.plotlines ?? []).find(p => p.id === plotlineId);
+  if (!plotline) return;
+  if ((plotline.items ?? []).some(i => i.kind === "scene" && i.sceneId === sceneId)) return;
+  plotline.items.push({ id: crypto.randomUUID(), kind: "scene", sceneId, completed: false });
+}
+
+export function removeSceneFromPlotline(sceneId, plotlineId, appData) {
+  const plotline = (appData.plotlines ?? []).find(p => p.id === plotlineId);
+  if (!plotline) return;
+  plotline.items = plotline.items.filter(i => !(i.kind === "scene" && i.sceneId === sceneId));
+}
+
 export function createTimelineEvent() {
   const now = new Date().toISOString();
   return {

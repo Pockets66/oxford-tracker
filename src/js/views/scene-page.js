@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { SCENE_STATUSES, SCENE_ROLES, displayName } from "../schema.js";
+import { SCENE_STATUSES, SCENE_ROLES, displayName, plotlinesForScene, addSceneToPlotline, removeSceneFromPlotline } from "../schema.js";
 import { parseFlexibleDate } from "../dates.js";
 import { createCombobox } from "../components/combobox.js";
 
@@ -280,6 +280,66 @@ export function mountScenePage(container, appData, id) {
     );
   }
 
+  // ── Plotlines section ──
+  const plotlineSectionEl = el("div", { class: "scene-page-section" });
+
+  function renderPlotlineSection() {
+    clear(plotlineSectionEl);
+
+    const linked = plotlinesForScene(scene.id, appData);
+    const chipsEl = el("div", { class: "scene-page-chips" });
+
+    for (const pl of linked) {
+      const color   = pl.color ?? "#4a6b8a";
+      const textCol = chipTextColor(color);
+      const chip    = el("span", { class: "scene-plotline-chip" });
+      chip.style.background = color;
+      chip.style.color      = textCol;
+
+      const titleLink = el("a", {
+        class: "scene-plotline-chip-link",
+        href:  `#/plotlines/${pl.id}`,
+      }, [pl.title || "Untitled"]);
+
+      const removeBtn = el("button", { class: "scene-plotline-chip-remove", onclick: (e) => {
+        e.stopPropagation();
+        removeSceneFromPlotline(scene.id, pl.id, appData);
+        save("plotlines", appData.plotlines);
+        renderPlotlineSection();
+      }}, ["×"]);
+
+      chip.append(titleLink, removeBtn);
+      chipsEl.append(chip);
+    }
+
+    const linkedIds  = new Set(linked.map(p => p.id));
+    const remaining  = (appData.plotlines ?? [])
+      .filter(p => !linkedIds.has(p.id))
+      .map(p => ({ value: p.id, label: p.title || "Untitled" }));
+
+    let pendingPlotlineId = "";
+    const plotlineCb = createCombobox({
+      items:       remaining,
+      value:       "",
+      placeholder: "Add plotline…",
+      onChange:    (val) => { pendingPlotlineId = val; },
+    });
+
+    const addBtn = el("button", { class: "btn-small", onclick: () => {
+      if (!pendingPlotlineId) return;
+      addSceneToPlotline(scene.id, pendingPlotlineId, appData);
+      save("plotlines", appData.plotlines);
+      pendingPlotlineId = "";
+      renderPlotlineSection();
+    }}, ["Add"]);
+
+    plotlineSectionEl.append(
+      sectionLabel("Plotlines"),
+      el("div", { class: "scene-page-add-row" }, [plotlineCb, addBtn]),
+      chipsEl,
+    );
+  }
+
   // ── Delete ──
   let deleteConfirm = false;
   const deleteBtn = el("button", { class: "btn-danger" }, ["Delete scene"]);
@@ -316,6 +376,7 @@ export function mountScenePage(container, appData, id) {
   // Initial renders
   renderFactionSection();
   renderCharSection();
+  renderPlotlineSection();
 
   const anomalySection = buildAnomalySection();
 
@@ -340,6 +401,7 @@ export function mountScenePage(container, appData, id) {
       section("Summary", summaryTa),
       section("Body", bodyTa),
       factionSectionEl,
+      plotlineSectionEl,
       charSectionEl,
       ...(anomalySection ? [anomalySection] : []),
       section("Notes", notesTa),
