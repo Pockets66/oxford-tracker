@@ -1,104 +1,142 @@
-/* ── Plotlines layout ── */
-.plotlines-layout {
-  display: flex;
-  gap: 0;
-  height: calc(100vh - var(--topbar-height, 56px) - 2rem);
-  overflow: hidden;
+/* ── Plotlines overview ── */
+.plotlines-overview {
+  padding: 1rem 1.5rem 3rem;
 }
 
-/* ── Sidebar ── */
-.plotlines-sidebar {
+.plotlines-toolbar {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1rem;
+}
+
+.plotlines-toolbar .filter-select {
   background: var(--bg-surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  flex-shrink: 0;
-  overflow-y: auto;
-  width: 240px;
-}
-
-.plotlines-sidebar-header {
-  border-bottom: 1px solid var(--border);
-  padding: 0.75rem;
-}
-
-.plotlines-new-btn {
-  width: 100%;
-}
-
-.plotline-list {
-  display: flex;
-  flex-direction: column;
-  padding: 0.5rem 0;
-}
-
-.plotline-empty-note {
-  color: var(--text-muted);
+  border: 1px solid var(--border);
+  color: var(--text);
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.8rem;
-  padding: 1rem 0.75rem;
+  padding: 0.3rem 0.5rem;
 }
 
-.plotline-list-item {
-  border-left: 3px solid var(--pl-color, var(--accent));
+.filter-checkbox-label {
+  align-items: center;
+  color: var(--text-muted);
   cursor: pointer;
   display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  padding: 0.55rem 0.75rem 0.55rem 0.65rem;
-  transition: background 0.1s;
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.8rem;
+  gap: 0.3rem;
+  user-select: none;
 }
 
-.plotline-list-item:hover {
-  background: var(--bg);
+.plotlines-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  margin-top: 1rem;
 }
 
-.plotline-list-item.is-selected {
-  background: var(--accent-soft);
+.plotline-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  padding: 1rem 1rem 1rem 1.5rem;
+  position: relative;
+  transition: border-color 0.12s;
 }
 
-.plotline-list-title {
+.plotline-card:hover { border-color: var(--gold); }
+
+.plotline-card-stripe {
+  bottom: 0;
+  left: 0;
+  position: absolute;
+  top: 0;
+  width: 6px;
+}
+
+.plotline-card-title {
   color: var(--text);
   font-family: 'EB Garamond', Georgia, serif;
-  font-size: 0.95rem;
-  font-weight: 500;
-  line-height: 1.3;
+  font-size: 1.2rem;
+  margin-bottom: 0.4rem;
 }
 
-.plotline-list-prog {
+.plotline-card-summary {
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  color: var(--text-muted);
+  display: -webkit-box;
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 0.95rem;
+  margin-bottom: 0.8rem;
+  overflow: hidden;
+}
+
+.plotline-card-progress-text {
   color: var(--text-muted);
   font-family: 'Inter', system-ui, sans-serif;
-  font-size: 0.7rem;
-  letter-spacing: 0.05em;
+  font-size: 0.75rem;
+  margin-bottom: 0.3rem;
 }
 
-/* Mini progress bar per list item */
-.plotline-list-bar {
-  background: var(--border);
-  height: 2px;
-  margin-top: 0.3rem;
-  overflow: hidden;
-  width: 100%;
+.plotline-card-progress-bar {
+  background: var(--bg);
+  height: 4px;
+  margin-bottom: 0.8rem;
 }
 
-.plotline-list-bar-fill {
-  background: var(--pl-color, var(--accent));
+.plotline-card-progress-fill {
   height: 100%;
-  transition: width 0.2s;
+  transition: width 0.3s;
 }
 
-/* ── Detail pane ── */
-.plotlines-detail {
-  flex: 1;
-  min-width: 0;
-  overflow-y: auto;
+.plotline-card-characters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
 }
 
-.plotline-select-hint {
+.plotline-card-secret-icon {
+  color: var(--gold);
+  opacity: 0.7;
+  position: absolute;
+  right: 0.5rem;
+  top: 0.5rem;
+}
+
+.char-chip {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.35rem;
+}
+
+.char-chip--more {
+  color: var(--text-muted);
+}
+
+.plotlines-empty {
+  color: var(--text-muted);
+  font-family: 'EB Garamond', Georgia, serif;
+  font-size: 1rem;
+  grid-column: 1 / -1;
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.plotlines-empty p { margin-bottom: 1rem; }
+
+.plotlines-empty-filter {
   color: var(--text-muted);
   font-family: 'Inter', system-ui, sans-serif;
   font-size: 0.875rem;
-  padding: 2rem 1.5rem;
+  grid-column: 1 / -1;
+  padding: 1.5rem 0;
 }
 
 /* ── Plotline detail content ── */
@@ -536,35 +574,3 @@
   padding-top: 1.25rem;
 }
 
-/* ── Narrow viewport (< 900px): stack layout ── */
-.plotlines-narrow-select {
-  display: none;
-}
-
-@media (max-width: 900px) {
-  .plotlines-layout {
-    flex-direction: column;
-    height: auto;
-    overflow: visible;
-  }
-
-  .plotlines-sidebar {
-    display: none;
-  }
-
-  .plotlines-narrow-select {
-    background: var(--bg-surface);
-    border: 1px solid var(--border);
-    color: var(--text);
-    display: block;
-    font-family: 'Inter', system-ui, sans-serif;
-    font-size: 0.875rem;
-    margin-bottom: 0.75rem;
-    padding: 0.4rem 0.5rem;
-    width: 100%;
-  }
-
-  .plotlines-detail {
-    overflow-y: visible;
-  }
-}

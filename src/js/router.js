@@ -1,4 +1,4 @@
-const TABS = ["timeline", "characters", "scenes", "plotlines", "factions", "secrets", "anomalies"];
+const TABS = ["plotlines", "scenes", "characters", "factions", "secrets", "anomalies", "timeline"];
 
 function parsePath() {
   const hash = location.hash.replace(/^#\/?/, "");
@@ -24,7 +24,7 @@ window.addEventListener("hashchange", () => {
 // Fire on first load so app boots into the right state.
 export function initRouter() {
   if (!location.hash) {
-    location.hash = "/timeline";
+    location.hash = "/plotlines";
   }
   window.dispatchEvent(new CustomEvent("route-change", { detail: parsePath() }));
 }

@@ -17,13 +17,13 @@ import { migrateCharacters, migrateNamesToV3, migrateToV4, seedCities } from "./
 import { dayOfWeek, addDays, formatLongDate, todayIso } from "./dates.js";
 
 const TABS = [
-  { id: "timeline",   label: "Timeline" },
-  { id: "characters", label: "Characters" },
-  { id: "scenes",     label: "Scenes" },
   { id: "plotlines",  label: "Plotlines" },
+  { id: "scenes",     label: "Scenes" },
+  { id: "characters", label: "Characters" },
   { id: "factions",   label: "Factions" },
   { id: "secrets",    label: "Secrets" },
   { id: "anomalies",  label: "Anomalies" },
+  { id: "timeline",   label: "Timeline" },
 ];
 
 const COMING_SLICE = {};
