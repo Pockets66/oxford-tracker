@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { save } from "../storage.js";
 import { navigate } from "../router.js";
-import { displayName, createScene, createCharacter } from "../schema.js";
+import { displayName, createScene, createCharacter, createFaction } from "../schema.js";
 import { openInlineCreateDialog } from "../components/inline-create-dialog.js";
 import { formatFlexibleDate, parseFlexibleDate } from "../dates.js";
 import { createCombobox } from "../components/combobox.js";
@@ -169,7 +169,7 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
       })
       .sort((a, b) => a.label.localeCompare(b.label));
 
-    const remainingWithNew = [...remaining, { value: "__add_new__", label: "+ Add new character" }];
+    const remainingWithNew = [{ value: "__add_new__", label: "+ Add new character" }, ...remaining];
 
     let pendingId = "";
     const cb = createCombobox({
@@ -240,10 +240,40 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
 
     const remaining = (appData.factions ?? [])
       .filter(f => !(pl.factionIds ?? []).includes(f.id))
-      .map(f => ({ value: f.id, label: f.name }));
+      .map(f => ({ value: f.id, label: f.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const remainingWithNew = [{ value: "__add_new__", label: "+ Add new faction" }, ...remaining];
 
     let pendingId = "";
-    const cb = createCombobox({ items: remaining, value: "", placeholder: "Add faction…", onChange: v => { pendingId = v; } });
+    const cb = createCombobox({
+      items: remainingWithNew,
+      value: "",
+      placeholder: "Add faction…",
+      presorted: true,
+      onChange: v => {
+        if (v === "__add_new__") {
+          pendingId = "";
+          openInlineCreateDialog({
+            title: "Create new faction",
+            fields: [
+              { name: "name", label: "Name", type: "text", required: true, autofocus: true },
+            ],
+            onSubmit: async (values) => {
+              const newFaction = createFaction();
+              newFaction.name = values.name;
+              (appData.factions ?? (appData.factions = [])).push(newFaction);
+              await save("factions", appData.factions);
+              pl.factionIds = [...(pl.factionIds ?? []), newFaction.id];
+              await persistNow();
+              renderFactionSection();
+            },
+          });
+          return;
+        }
+        pendingId = v;
+      },
+    });
     const addBtn = el("button", { class: "btn-small", onclick: () => {
       if (!pendingId || (pl.factionIds ?? []).includes(pendingId)) return;
       pl.factionIds = [...(pl.factionIds ?? []), pendingId];
@@ -554,7 +584,7 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
       .map(s => ({ value: s.id, label: s.title || "Untitled" }))
       .sort((a, b) => a.label.localeCompare(b.label));
 
-    const availableScenesWithNew = [...availableScenes, { value: "__add_new__", label: "+ Add new scene" }];
+    const availableScenesWithNew = [{ value: "__add_new__", label: "+ Add new scene" }, ...availableScenes];
 
     let pendingSceneId = "";
     const sceneCb = createCombobox({

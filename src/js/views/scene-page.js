@@ -1,7 +1,7 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { SCENE_STATUSES, SCENE_ROLES, displayName, plotlinesForScene, addSceneToPlotline, removeSceneFromPlotline, createCharacter, createPlotline } from "../schema.js";
+import { SCENE_STATUSES, SCENE_ROLES, displayName, plotlinesForScene, addSceneToPlotline, removeSceneFromPlotline, createCharacter, createPlotline, createFaction } from "../schema.js";
 import { openInlineCreateDialog } from "../components/inline-create-dialog.js";
 import { parseFlexibleDate } from "../dates.js";
 import { createCombobox } from "../components/combobox.js";
@@ -188,14 +188,40 @@ export function mountScenePage(container, appData, id) {
 
     const remaining = appData.factions
       .filter(f => !scene.factionIds.includes(f.id))
-      .map(f => ({ value: f.id, label: f.name }));
+      .map(f => ({ value: f.id, label: f.name }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const remainingWithNew = [{ value: "__add_new__", label: "+ Add new faction" }, ...remaining];
 
     let pendingFactionId = "";
     const factionCb = createCombobox({
-      items: remaining,
+      items: remainingWithNew,
       value: "",
       placeholder: "Add faction…",
-      onChange: (val) => { pendingFactionId = val; },
+      presorted: true,
+      onChange: (val) => {
+        if (val === "__add_new__") {
+          pendingFactionId = "";
+          openInlineCreateDialog({
+            title: "Create new faction",
+            fields: [
+              { name: "name", label: "Name", type: "text", required: true, autofocus: true },
+            ],
+            onSubmit: async (values) => {
+              const newFaction = createFaction();
+              newFaction.name = values.name;
+              (appData.factions ?? (appData.factions = [])).push(newFaction);
+              await save("factions", appData.factions);
+              scene.factionIds.push(newFaction.id);
+              persist();
+              renderFactionSection();
+              renderCharSection();
+            },
+          });
+          return;
+        }
+        pendingFactionId = val;
+      },
     });
 
     const addBtn = el("button", { class: "btn-small", onclick: () => {
@@ -250,8 +276,8 @@ export function mountScenePage(container, appData, id) {
 
     // Add row with smart-sorted combobox + role select + Add button
     const charItemsWithNew = [
-      ...buildCharItems(scene, appData),
       { value: "__add_new__", label: "+ Add new character" },
+      ...buildCharItems(scene, appData),
     ];
     let pendingCharId = "";
 
@@ -348,7 +374,7 @@ export function mountScenePage(container, appData, id) {
       .map(p => ({ value: p.id, label: p.title || "Untitled" }));
 
     const PLOTLINE_COLORS = ["#4a6b8a", "#7a5b9a", "#5b9a7a", "#9a7a5b", "#a65b5b"];
-    const remainingWithNew = [...remaining, { value: "__add_new__", label: "+ Add new plotline" }];
+    const remainingWithNew = [{ value: "__add_new__", label: "+ Add new plotline" }, ...remaining];
 
     let pendingPlotlineId = "";
     const plotlineCb = createCombobox({
