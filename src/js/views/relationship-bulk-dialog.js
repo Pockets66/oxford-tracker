@@ -110,9 +110,10 @@ function makeLinkChecks(initialLinks) {
 // ── Filter bar ────────────────────────────────────────────────────────────────
 
 function makeFilterBar(appData, onChange) {
-  let searchQ   = "";
-  let ownerSet  = new Set(OWNERS);
-  let factionId = "";
+  let searchQ      = "";
+  let ownerSet     = new Set(OWNERS);
+  let factionId    = "";
+  let showDeceased = false;
 
   const searchEl = el("input", {
     type:        "text",
@@ -143,13 +144,22 @@ function makeFilterBar(appData, onChange) {
   }
   factionSel.addEventListener("change", () => { factionId = factionSel.value; onChange(); });
 
+  const deceasedCheck = el("input", { type: "checkbox" });
+  deceasedCheck.checked = showDeceased;
+  deceasedCheck.addEventListener("change", () => { showDeceased = deceasedCheck.checked; onChange(); });
+  const deceasedLabel = el("label", { class: "filter-checkbox-label rbd-deceased-toggle" }, [
+    deceasedCheck, " Show deceased",
+  ]);
+
   const barEl = el("div", { class: "rbd-filter-bar" }, [
     searchEl,
     el("div", { class: "rbd-owner-btns" }, ownerBtns),
     factionSel,
+    deceasedLabel,
   ]);
 
   function matches(ch) {
+    if (!showDeceased && ch.deceased) return false;
     if (!ownerSet.has(ch.owner)) return false;
     if (factionId && !(ch.factionIds ?? []).includes(factionId)) return false;
     if (searchQ) {

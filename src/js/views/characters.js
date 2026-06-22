@@ -41,7 +41,7 @@ const DEFAULT_STATE = {
   owner:        [...ALL_OWNERS],
   faction:      [],
   language:     [],
-  showDeceased: true,
+  showDeceased: false,
   secret:       [],
 };
 
@@ -55,7 +55,7 @@ function loadFilterState() {
         owner:        Array.isArray(s.owner)    ? s.owner    : [...ALL_OWNERS],
         faction:      Array.isArray(s.faction)  ? s.faction  : [],
         language:     Array.isArray(s.language) ? s.language : [],
-        showDeceased: s.showDeceased !== undefined ? s.showDeceased : true,
+        showDeceased: s.showDeceased !== undefined ? s.showDeceased : false,
         secret:       Array.isArray(s.secret)   ? s.secret   : [],
       };
     }
@@ -73,7 +73,7 @@ function isFilterModified(state) {
     state.owner.length < ALL_OWNERS.length ||
     state.faction.length ||
     state.language.length ||
-    !state.showDeceased ||
+    state.showDeceased ||
     state.secret.length
   );
 }
@@ -388,7 +388,7 @@ export function mountCharacters(container, appData) {
     renderFactionChips();
     renderLangChips();
     renderSecretChips();
-    deceasedCheck.checked = true;
+    deceasedCheck.checked = false;
     try { localStorage.removeItem(PERSIST_KEY); } catch {}
     clearBtn.style.display = "none";
     renderGrid();
