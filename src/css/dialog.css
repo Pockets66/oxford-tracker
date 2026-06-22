@@ -180,3 +180,23 @@
   padding-left: 1.25rem;
   border-left: 2px solid var(--border);
 }
+
+/* ── Inline-create dialog ── */
+.icd-dialog {
+  max-width: 360px;
+}
+
+.dialog-input {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  font-family: 'Inter', system-ui, sans-serif;
+  font-size: 0.875rem;
+  padding: 0.35rem 0.5rem;
+  width: 100%;
+}
+
+.dialog-input:focus {
+  border-color: var(--gold-soft);
+  outline: none;
+}

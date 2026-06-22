@@ -1,7 +1,8 @@
 import { el, clear } from "../dom.js";
 import { save } from "../storage.js";
 import { navigate } from "../router.js";
-import { displayName } from "../schema.js";
+import { displayName, createScene, createCharacter } from "../schema.js";
+import { openInlineCreateDialog } from "../components/inline-create-dialog.js";
 import { formatFlexibleDate, parseFlexibleDate } from "../dates.js";
 import { createCombobox } from "../components/combobox.js";
 
@@ -165,10 +166,45 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
         const dn  = displayName(c);
         const aka = c.aliases?.[0] && c.aliases[0] !== dn ? ` (${c.aliases[0]})` : "";
         return { value: c.id, label: dn + aka };
-      });
+      })
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const remainingWithNew = [...remaining, { value: "__add_new__", label: "+ Add new character" }];
 
     let pendingId = "";
-    const cb = createCombobox({ items: remaining, value: "", placeholder: "Add character…", onChange: v => { pendingId = v; } });
+    const cb = createCombobox({
+      items: remainingWithNew,
+      value: "",
+      placeholder: "Add character…",
+      presorted: true,
+      onChange: v => {
+        if (v === "__add_new__") {
+          pendingId = "";
+          openInlineCreateDialog({
+            title: "Create new character",
+            fields: [
+              { name: "firstName", label: "First name", type: "text", required: true, autofocus: true },
+              { name: "lastName",  label: "Last name",  type: "text", required: false },
+              { name: "owner",     label: "Owner",      type: "select",
+                options: ["NPC", "Bree", "Jack", "Nicole", "Caiden"], default: "NPC" },
+            ],
+            onSubmit: async (values) => {
+              const newChar = createCharacter();
+              newChar.firstName = values.firstName;
+              newChar.lastName  = values.lastName;
+              newChar.owner     = values.owner;
+              appData.characters.push(newChar);
+              await save("characters", appData.characters);
+              pl.characterIds = [...(pl.characterIds ?? []), newChar.id];
+              await persistNow();
+              renderCharSection();
+            },
+          });
+          return;
+        }
+        pendingId = v;
+      },
+    });
     const addBtn = el("button", { class: "btn-small", onclick: () => {
       if (!pendingId || (pl.characterIds ?? []).includes(pendingId)) return;
       pl.characterIds = [...(pl.characterIds ?? []), pendingId];
@@ -515,14 +551,39 @@ export function mountPlotlineDetail(container, appData, pl, { onUpdate, onDelete
     const sceneAlready = new Set((pl.items ?? []).filter(i => i.kind === "scene").map(i => i.sceneId));
     const availableScenes = (appData.scenes ?? [])
       .filter(s => !sceneAlready.has(s.id))
-      .map(s => ({ value: s.id, label: s.title || "Untitled" }));
+      .map(s => ({ value: s.id, label: s.title || "Untitled" }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+
+    const availableScenesWithNew = [...availableScenes, { value: "__add_new__", label: "+ Add new scene" }];
 
     let pendingSceneId = "";
     const sceneCb = createCombobox({
-      items: availableScenes,
+      items: availableScenesWithNew,
       value: "",
       placeholder: "Add scene…",
-      onChange: v => { pendingSceneId = v; },
+      presorted: true,
+      onChange: v => {
+        if (v === "__add_new__") {
+          pendingSceneId = "";
+          openInlineCreateDialog({
+            title: "Create new scene",
+            fields: [
+              { name: "title", label: "Title", type: "text", required: true, autofocus: true },
+            ],
+            onSubmit: async (values) => {
+              const newScene = createScene();
+              newScene.title = values.title;
+              (appData.scenes ?? (appData.scenes = [])).push(newScene);
+              await save("scenes", appData.scenes);
+              pl.items.push({ id: crypto.randomUUID(), kind: "scene", sceneId: newScene.id, completed: false });
+              await persistNow();
+              renderItems();
+            },
+          });
+          return;
+        }
+        pendingSceneId = v;
+      },
     });
     const addSceneBtn = el("button", { class: "btn-small", onclick: () => {
       if (!pendingSceneId) return;

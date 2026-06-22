@@ -1,7 +1,8 @@
 import { el, clear } from "../dom.js";
 import { navigate } from "../router.js";
 import { save } from "../storage.js";
-import { SCENE_STATUSES, SCENE_ROLES, displayName, plotlinesForScene, addSceneToPlotline, removeSceneFromPlotline } from "../schema.js";
+import { SCENE_STATUSES, SCENE_ROLES, displayName, plotlinesForScene, addSceneToPlotline, removeSceneFromPlotline, createCharacter, createPlotline } from "../schema.js";
+import { openInlineCreateDialog } from "../components/inline-create-dialog.js";
 import { parseFlexibleDate } from "../dates.js";
 import { createCombobox } from "../components/combobox.js";
 
@@ -248,15 +249,44 @@ export function mountScenePage(container, appData, id) {
     }
 
     // Add row with smart-sorted combobox + role select + Add button
-    const charItems = buildCharItems(scene, appData);
+    const charItemsWithNew = [
+      ...buildCharItems(scene, appData),
+      { value: "__add_new__", label: "+ Add new character" },
+    ];
     let pendingCharId = "";
 
     const charCb = createCombobox({
-      items: charItems,
+      items: charItemsWithNew,
       value: "",
       placeholder: "Add character…",
       presorted: true,
-      onChange: (val) => { pendingCharId = val; },
+      onChange: (val) => {
+        if (val === "__add_new__") {
+          pendingCharId = "";
+          openInlineCreateDialog({
+            title: "Create new character",
+            fields: [
+              { name: "firstName", label: "First name", type: "text", required: true, autofocus: true },
+              { name: "lastName",  label: "Last name",  type: "text", required: false },
+              { name: "owner",     label: "Owner",      type: "select",
+                options: ["NPC", "Bree", "Jack", "Nicole", "Caiden"], default: "NPC" },
+            ],
+            onSubmit: async (values) => {
+              const newChar = createCharacter();
+              newChar.firstName = values.firstName;
+              newChar.lastName  = values.lastName;
+              newChar.owner     = values.owner;
+              appData.characters.push(newChar);
+              await save("characters", appData.characters);
+              scene.characters.push({ characterId: newChar.id, role: "Background" });
+              await save("scenes", appData.scenes);
+              renderCharSection();
+            },
+          });
+          return;
+        }
+        pendingCharId = val;
+      },
     });
 
     const roleSel = el("select", { class: "scene-page-role-select" });
@@ -317,12 +347,37 @@ export function mountScenePage(container, appData, id) {
       .filter(p => !linkedIds.has(p.id))
       .map(p => ({ value: p.id, label: p.title || "Untitled" }));
 
+    const PLOTLINE_COLORS = ["#4a6b8a", "#7a5b9a", "#5b9a7a", "#9a7a5b", "#a65b5b"];
+    const remainingWithNew = [...remaining, { value: "__add_new__", label: "+ Add new plotline" }];
+
     let pendingPlotlineId = "";
     const plotlineCb = createCombobox({
-      items:       remaining,
+      items:       remainingWithNew,
       value:       "",
       placeholder: "Add plotline…",
-      onChange:    (val) => { pendingPlotlineId = val; },
+      onChange:    (val) => {
+        if (val === "__add_new__") {
+          pendingPlotlineId = "";
+          openInlineCreateDialog({
+            title: "Create new plotline",
+            fields: [
+              { name: "title", label: "Title", type: "text", required: true, autofocus: true },
+            ],
+            onSubmit: async (values) => {
+              const newPl = createPlotline();
+              newPl.title = values.title;
+              newPl.color = PLOTLINE_COLORS[(appData.plotlines ?? []).length % PLOTLINE_COLORS.length];
+              (appData.plotlines ?? (appData.plotlines = [])).push(newPl);
+              await save("plotlines", appData.plotlines);
+              addSceneToPlotline(scene.id, newPl.id, appData);
+              await save("plotlines", appData.plotlines);
+              renderPlotlineSection();
+            },
+          });
+          return;
+        }
+        pendingPlotlineId = val;
+      },
     });
 
     const addBtn = el("button", { class: "btn-small", onclick: () => {

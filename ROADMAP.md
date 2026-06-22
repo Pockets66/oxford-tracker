@@ -331,6 +331,21 @@ Followups:
 - Graphical chart wheel (SVG glyph ring) deferred — would need a canvas or SVG rendering pass.
 - Print-to-PDF export deferred.
 
+## Slice 15: Plotlines overview + scene/plotline sync + inline entity creation
+
+Prompt: `prompts/15-plotlines-overview-sync.md`
+
+**Status: done** — 2026-06-22
+
+Checkpoints:
+- CP1: Tab reorder (Plotlines first, Timeline last), default route changed to `#/plotlines`, plotlines view converted from sidebar+detail to card-grid overview with filter bar (text search, character picker, secret-only toggle, localStorage persistence), empty state, color stripe, progress bar, character chips per card. Done.
+- CP2: `plotlinesForScene`, `addSceneToPlotline`, `removeSceneFromPlotline` helpers added to schema.js. Scene page gains a Plotlines section: colored chips linking to plotline detail, × remove, combobox to add any unlinked plotline. Relationship is computed (lives on plotline.items). Done.
+- CP3: `openInlineCreateDialog` shared component (`src/js/components/inline-create-dialog.js`). Four `__add_new__` flows wired: plotline-detail "Add scene", plotline-detail "Add character", scene-page "Add character", scene-page "Add plotline". Created entities appear immediately; detail can be filled later. Done.
+
+Followups:
+- "Add new" support in other comboboxes (factions, anomalies, etc.) deferred per slice scope.
+- Plotline overview filter character dropdown could be a combobox (searchable) for large casts.
+
 ## Slice 12: Export, import, polish, search
 
 Export the full data folder as a single zipped bundle. Import the same. Global search box that finds across characters, scenes, plotlines, factions, anomalies. Visual polish pass: typography, spacing, color tuning, diagram label tuning.
